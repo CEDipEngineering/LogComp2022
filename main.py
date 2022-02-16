@@ -19,26 +19,12 @@ class Compiler:
     
     def semantics(self, input: string)->string:
         symbols = ['+', '-']
-        # match_dict = {}
-        # i = 0
-        # for char in input:
-        #     if char in symbols:
-        #         match_dict[i] = char
-        #     i+=1
-        # n=len(match_dict.keys())
-        # j = 0
-        # while j<n-1:
-        #     print(input[match_dict[j]:match_dict[j+1]])
-        #     j+=1
-        # print(match_dict) 
-        # 
         running = True
         while running:
+            # print(input)
             if len(input) == 0 or ('+' not in input and '-' not in input):
                 running = False
                 raise ValueError
-                continue
-            curr_op = None
             a_str = ''
             b_str = ''
             a = 0
@@ -53,12 +39,8 @@ class Compiler:
             b_str = input[i+1:j]
             a_str = a_str.replace(" ", "")
             b_str = b_str.replace(" ", "")
-            try:
-                a = int(a_str)
-                b = int(b_str)
-            except ValueError:
-                print("Invalid string input, try again!")
-                return ""
+            a = int(a_str)
+            b = int(b_str)
             # print(a_str)
             # print(input[i])
             # print(b_str)
@@ -66,6 +48,8 @@ class Compiler:
                 input = input.replace(input[0:j], str(a + b),1)
             elif input[i] == '-':   
                 input = input.replace(input[0:j], str(a - b),1)
+            if len(input) == 0 or ('+' not in input and '-' not in input) or input.startswith('-'):
+                running = False
         return input
 
     def main(self, input: string):
