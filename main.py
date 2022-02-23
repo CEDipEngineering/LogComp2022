@@ -1,71 +1,91 @@
 import string
 import sys
 import re
+from turtle import position
 
+from pyparsing import ParseExpression
 
-class Compiler:
+class Token():
+    def __init__(self, type, value):
+        self.type: str = type
+        self.value: int = value
 
-    def __init__(self):
-        pass
+    def __str__(self):
+        return f"({self.value},{self.type})"
 
-    def preprocess(self, input: string)->string:
-        return input
-
-    def lexicon(self, input: string)->list:
-        return input
-
-    def sintax(self, input: list)->string:      
-        return input
+class Tokenizer():
+    def __init__(self, origin):
+        self.origin: str = origin
+        self.position: int = 0
+        self.actual: Token
     
-    def semantics(self, input: string)->string:
-        symbols = ['+', '-']
-        running = True
-        while running:
-            # print(input)
-            if len(input) == 0 or ('+' not in input and '-' not in input):
-                running = False
-                raise ValueError
-            a_str = ''
-            b_str = ''
-            a = 0
-            b = 0
-            i=0
-            while input[i] not in symbols:
-                i+=1
-            a_str = input[0:i]
-            j = i+1
-            while j<len(input) and input[j] not in symbols:
-                j+=1
-            b_str = input[i+1:j]
-            a_str = a_str.replace(" ", "")
-            b_str = b_str.replace(" ", "")
-            a = int(a_str)
-            b = int(b_str)
-            # print(a_str)
-            # print(input[i])
-            # print(b_str)
-            if input[i] == '+':
-                input = input.replace(input[0:j], str(a + b),1)
-            elif input[i] == '-':   
-                input = input.replace(input[0:j], str(a - b),1)
-            if len(input) == 0 or ('+' not in input and '-' not in input) or input.startswith('-'):
-                running = False
-        return input
+    def selectNext(self) -> Token:
+        ## Find next token and update self.actual
+        if self.position == len(self.origin):
+            return Token("EOF", "EOF")
+        elif self.origin[self.position] == "+":
+            self.actual = Token("PLUS", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position] == "-":
+            self.actual = Token("MINUS", self.origin[self.position])
+            self.position += 1
+        elif (re.match("[0-9]|\s", self.origin[self.position]) != None):
+            # Acumulate number by concat
+            acum = ""
 
-    def main(self, input: string):
-        preprocessed = self.preprocess(input)
-        lexiconized = self.lexicon(preprocessed)
-        sintaxed = self.sintax(lexiconized)
-        return self.semantics(sintaxed)
+            # If is not digit, advance 
+            while not (re.match("[0-9]+", self.origin[self.position:]) != None): 
+                self.position+=1
+                # Recursiveness re-checks previous cases
+                return self.selectNext()
+            while re.match("[0-9]+", self.origin[self.position:]) != None:
+                acum += self.origin[self.position]
+                self.position += 1
+            self.actual = Token("INT", int(acum))
+        else:
+            raise Exception(f"LexiconError: Invalid character '{self.origin[self.position]}'")
+        return self.actual
+
+class Parser():
+    tokens: Tokenizer
+
+    def parseExpression():
+        ## Consume tokens, and calculate result
+        curr_token = Parser.tokens.selectNext()
+        if curr_token.type == "INT":
+            result = curr_token.value
+            curr_token = Parser.tokens.selectNext()
+            while curr_token.type == "PLUS" or curr_token.type == "MINUS":
+                if curr_token.type == "PLUS":
+                    curr_token = Parser.tokens.selectNext()
+                    if curr_token.type == "INT":
+                        result += curr_token.value
+                    else:
+                        raise SyntaxError
+                elif curr_token.type == "MINUS":
+                    curr_token = Parser.tokens.selectNext()
+                    if curr_token.type == "INT":
+                        result -= curr_token.value
+                    else:
+                        raise SyntaxError
+                curr_token = Parser.tokens.selectNext()
+            return result
+        else:
+            raise SyntaxError
+
+    def run(source: str):
+        ## Inicializa Tokenizer, roda Parser, retorna parseExpression()
+        Parser.tokens = Tokenizer(source)
+        return Parser.parseExpression()
 
 
+def main(argv: list, argc: int):
+    if argc < 2:
+        print("Send more args plz")
+        return 1
+    _ = Parser()
+    print(Parser.run(argv[1]))
+    return 0
 
 if __name__ == "__main__":
-    compiler = Compiler()
-    if len(sys.argv) < 2:
-        print("Send more args plz")
-        exit(1)
-    # print("Compiling...")
-    print(compiler.main(sys.argv[1]))
-    exit(0)
-    
+    exit(main(sys.argv, len(sys.argv)))
