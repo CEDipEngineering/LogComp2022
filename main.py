@@ -1,7 +1,9 @@
-from ast import Raise
+from locale import currency
 import string
 import sys
 import re
+
+from parso import ParserSyntaxError
 
 class Token():
     def __init__(self, type, value):
@@ -10,9 +12,12 @@ class Token():
 
     def __str__(self):
         return f"({self.value},{self.type})"
+    
+    def __repr__(self):
+        return self.__str__()
 
 class Prepro():
-    def process(string: str) -> str:
+    def filter(string: str) -> str:
         string = re.sub("/\*.*?\*/", "",string)
         if "/*" in string or "*/" in string:
             raise Exception("CommentError")
@@ -26,6 +31,7 @@ class Tokenizer():
     
     def selectNext(self) -> Token:
         self.actual = self._advance()
+        # print(self.actual)
         return self.actual
 
     def _advance(self):
@@ -61,49 +67,61 @@ class Tokenizer():
             raise Exception(f"LexiconError: Invalid character '{self.origin[self.position]}'")
         return token
 
+    def dump_tokens(self):
+        curr_token = self.actual
+        while curr_token.type != "EOF":
+            print(curr_token)
+            curr_token = self._advance()
+
+
 class Parser():
     tokens: Tokenizer
 
     def parseExpression():
-        ## Consume tokens, and calculate result
         if Parser.tokens.actual.type != "INT":
-            raise SyntaxError
-        result = Parser.parseTerm(Parser.tokens.actual.value())
-        curr_token = Parser.tokens.selectNext()
-        while curr_token.type == "PLUS" or curr_token.type == "MINUS":
-            if curr_token.type == "PLUS":
-                curr_token = Parser.tokens.selectNext()
-                if curr_token.type == "INT":
-                    result += curr_token.value
-                else:
-                    raise SyntaxError
-            elif curr_token.type == "MINUS":
-                curr_token = Parser.tokens.selectNext()
-                if curr_token.type == "INT":
-                    result -= curr_token.value
-                else:
-                    raise SyntaxError
-            
-            curr_token = Parser.tokens.selectNext()
+            raise SyntaxError("Must begin sequence with integer")
+        result = Parser.parseTerm()
+        operation = Parser.tokens.actual
+        while operation.type == "PLUS" or operation.type == "MINUS":
+            next_token = Parser.tokens.selectNext()
+            if next_token.type != "INT":
+                raise SyntaxError("Expected integer")
+            if operation.type == "PLUS":
+                result = result + Parser.parseTerm()
+            elif operation.type == "MINUS":
+                result = result - Parser.parseTerm()
+            operation = Parser.tokens.actual
+            if operation.type == "INT":
+                raise SyntaxError("Expected valid operation, instead got integer")
         return result
 
-    def parseTerm(result):
-        curr_token = Parser.tokens.selectNext()
-        while curr_token.type == "MULT" or curr_token.type == "DIV":
-            Parser.tokens.selectNext() #Avança pro próximo numero
-            if Parser.tokens.actual.type != "INT":
-                raise SyntaxError
-            if curr_token.type == "MULT":
-                result *= Parser.tokens.actual.value
-            if curr_token.type == "DIV":
-                result //= Parser.tokens.actual.value
-            
+    def parseTerm():
+        if Parser.tokens.actual.type != "INT":
+            raise SyntaxError("Expected integer")
+        result = Parser.tokens.actual.value
+        print(f"Parse term {result=}")
+        operation = Parser.tokens.selectNext()
+        while operation.type == "MULT" or operation.type == "DIV":
+            next_token = Parser.tokens.selectNext()
+            if next_token.type != "INT":
+                raise SyntaxError("Expected integer")
+            if operation.type == "MULT":
+                result = result * next_token.value
+            elif operation.type == "DIV":
+                result = result // next_token.value
+            operation = Parser.tokens.selectNext()
+            if operation.type == "INT":
+                raise SyntaxError("Expected valid operation, instead got integer")
         return result
 
     def run(source: str):
         ## Inicializa Tokenizer, roda Parser, retorna parseExpression()
         Parser.tokens = Tokenizer(source)
         return Parser.parseExpression()
+    
+    def debug_run(source: str):
+        Parser.tokens = Tokenizer(source)
+        return Parser.tokens.dump_tokens()
 
 def main(argv: list, argc: int):
     if argc < 2:
@@ -111,7 +129,9 @@ def main(argv: list, argc: int):
         return 1
     _ = Parser()
     _ = Prepro()
-    print(Parser.run(Prepro.process(argv[1])))
+
+    Parser.debug_run(Prepro.filter(argv[1]))
+    print(Parser.run(Prepro.filter(argv[1])))
     return 0
 
 if __name__ == "__main__":
