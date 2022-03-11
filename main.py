@@ -1,9 +1,6 @@
-from locale import currency
 import string
 import sys
 import re
-
-from parso import ParserSyntaxError
 
 class Token():
     def __init__(self, type, value):
