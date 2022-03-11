@@ -96,7 +96,7 @@ class Parser():
         if Parser.tokens.actual.type != "INT":
             raise SyntaxError("Expected integer")
         result = Parser.tokens.actual.value
-        print(f"Parse term {result=}")
+        # print(f"Parse term {result=}")
         operation = Parser.tokens.selectNext()
         while operation.type == "MULT" or operation.type == "DIV":
             next_token = Parser.tokens.selectNext()
@@ -127,7 +127,7 @@ def main(argv: list, argc: int):
     _ = Parser()
     _ = Prepro()
 
-    Parser.debug_run(Prepro.filter(argv[1]))
+    # Parser.debug_run(Prepro.filter(argv[1]))
     print(Parser.run(Prepro.filter(argv[1])))
     return 0
 
