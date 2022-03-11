@@ -98,6 +98,8 @@ class Parser():
         result = Parser.tokens.actual.value
         # print(f"Parse term {result=}")
         operation = Parser.tokens.selectNext()
+        if operation.type == "INT":
+            raise SyntaxError("Expected valid operation, instead got integer")
         while operation.type == "MULT" or operation.type == "DIV":
             next_token = Parser.tokens.selectNext()
             if next_token.type != "INT":
