@@ -27,6 +27,7 @@ class Tokenizer():
         self.actual: Token = self.selectNext()
     
     def selectNext(self) -> Token:
+        print("AVANCEI TOKEN")
         self.actual = self._advance()
         # print(self.actual)
         return self.actual
@@ -48,6 +49,12 @@ class Tokenizer():
         elif self.origin[self.position] == "/":
             token = Token("DIV", self.origin[self.position])
             self.position += 1
+        elif self.origin[self.position] == "(":
+            token = Token("OP", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position] == ")":
+            token = Token("CP", self.origin[self.position])
+            self.position += 1
         elif (re.match("[0-9]|\s", self.origin[self.position]) != None):
             # Acumulate number by concat
             acum = ""
@@ -55,7 +62,7 @@ class Tokenizer():
             while not (re.match("[0-9]+", self.origin[self.position:]) != None): 
                 self.position+=1
                 # Recursiveness re-checks previous cases
-                return self.selectNext()
+                return self._advance()
             while re.match("[0-9]+", self.origin[self.position:]) != None:
                 acum += self.origin[self.position]
                 self.position += 1
@@ -70,19 +77,15 @@ class Tokenizer():
             print(curr_token)
             curr_token = self._advance()
 
-
 class Parser():
     tokens: Tokenizer
 
     def parseExpression():
-        if Parser.tokens.actual.type != "INT":
-            raise SyntaxError("Must begin sequence with integer")
+        print(Parser.tokens.actual , " EXPRESSION")
         result = Parser.parseTerm()
         operation = Parser.tokens.actual
         while operation.type == "PLUS" or operation.type == "MINUS":
             next_token = Parser.tokens.selectNext()
-            if next_token.type != "INT":
-                raise SyntaxError("Expected integer")
             if operation.type == "PLUS":
                 result = result + Parser.parseTerm()
             elif operation.type == "MINUS":
@@ -93,11 +96,9 @@ class Parser():
         return result
 
     def parseTerm():
-        if Parser.tokens.actual.type != "INT":
-            raise SyntaxError("Expected integer")
-        result = Parser.tokens.actual.value
-        # print(f"Parse term {result=}")
-        operation = Parser.tokens.selectNext()
+        print(Parser.tokens.actual , " TERM")
+        result = Parser.parseFactor()
+        operation = Parser.tokens.actual
         if operation.type == "INT":
             raise SyntaxError("Expected valid operation, instead got integer")
         while operation.type == "MULT" or operation.type == "DIV":
@@ -105,18 +106,45 @@ class Parser():
             if next_token.type != "INT":
                 raise SyntaxError("Expected integer")
             if operation.type == "MULT":
-                result = result * next_token.value
+                result = result * Parser.parseFactor()
             elif operation.type == "DIV":
-                result = result // next_token.value
+                result = result // Parser.parseFactor()
             operation = Parser.tokens.selectNext()
             if operation.type == "INT":
                 raise SyntaxError("Expected valid operation, instead got integer")
+        print(f"Term {result=}")
         return result
+
+    def parseFactor():
+        print(Parser.tokens.actual , " FACTOR")
+        operation = Parser.tokens.actual
+        if operation.type == "INT":
+            Parser.tokens.selectNext()
+            return operation.value
+        elif operation.type == "PLUS":
+            Parser.tokens.selectNext()
+            return Parser.parseFactor()
+        elif operation.type == "MINUS":
+            Parser.tokens.selectNext()
+            return -Parser.parseFactor()
+        elif operation.type == "OP":
+            Parser.tokens.selectNext()
+            result = Parser.parseExpression()
+            if Parser.tokens.actual.type == "CP":
+                Parser.tokens.selectNext()
+                return result
+            else:
+                raise SyntaxError("Failed to close parentheses")
+        else:
+            raise SyntaxError("Expected INT, +, -, or parentheses")
 
     def run(source: str):
         ## Inicializa Tokenizer, roda Parser, retorna parseExpression()
         Parser.tokens = Tokenizer(source)
-        return Parser.parseExpression()
+        result = Parser.parseExpression()
+        if Parser.tokens.actual.type != "EOF":
+            raise SyntaxError("Failed to reach EOF")
+        return result
     
     def debug_run(source: str):
         Parser.tokens = Tokenizer(source)
