@@ -27,8 +27,8 @@ class Tokenizer():
         self.actual: Token = self.selectNext()
     
     def selectNext(self) -> Token:
-        print("AVANCEI TOKEN")
         self.actual = self._advance()
+        print("AVANCEI TOKEN ", self.actual)
         # print(self.actual)
         return self.actual
 
@@ -85,7 +85,7 @@ class Parser():
         result = Parser.parseTerm()
         operation = Parser.tokens.actual
         while operation.type == "PLUS" or operation.type == "MINUS":
-            next_token = Parser.tokens.selectNext()
+            Parser.tokens.selectNext()
             if operation.type == "PLUS":
                 result = result + Parser.parseTerm()
             elif operation.type == "MINUS":
@@ -102,16 +102,16 @@ class Parser():
         if operation.type == "INT":
             raise SyntaxError("Expected valid operation, instead got integer")
         while operation.type == "MULT" or operation.type == "DIV":
-            next_token = Parser.tokens.selectNext()
-            if next_token.type != "INT":
-                raise SyntaxError("Expected integer")
+            Parser.tokens.selectNext()
             if operation.type == "MULT":
                 result = result * Parser.parseFactor()
+                operation = Parser.tokens.actual
             elif operation.type == "DIV":
                 result = result // Parser.parseFactor()
-            operation = Parser.tokens.selectNext()
-            if operation.type == "INT":
-                raise SyntaxError("Expected valid operation, instead got integer")
+                operation = Parser.tokens.actual
+            # operation = Parser.tokens.selectNext()
+            # if operation.type == "INT":
+            #     raise SyntaxError("Expected valid operation, instead got integer")
         print(f"Term {result=}")
         return result
 
@@ -157,7 +157,7 @@ def main(argv: list, argc: int):
     _ = Parser()
     _ = Prepro()
 
-    # Parser.debug_run(Prepro.filter(argv[1]))
+    Parser.debug_run(Prepro.filter(argv[1]))
     print(Parser.run(Prepro.filter(argv[1])))
     return 0
 
