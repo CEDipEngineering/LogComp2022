@@ -28,7 +28,7 @@ class Tokenizer():
     
     def selectNext(self) -> Token:
         self.actual = self._advance()
-        print("AVANCEI TOKEN ", self.actual)
+        # print("AVANCEI TOKEN ", self.actual)
         # print(self.actual)
         return self.actual
 
@@ -81,7 +81,7 @@ class Parser():
     tokens: Tokenizer
 
     def parseExpression():
-        print(Parser.tokens.actual , " EXPRESSION")
+        # print(Parser.tokens.actual , " EXPRESSION")
         result = Parser.parseTerm()
         operation = Parser.tokens.actual
         while operation.type == "PLUS" or operation.type == "MINUS":
@@ -96,7 +96,7 @@ class Parser():
         return result
 
     def parseTerm():
-        print(Parser.tokens.actual , " TERM")
+        # print(Parser.tokens.actual , " TERM")
         result = Parser.parseFactor()
         operation = Parser.tokens.actual
         if operation.type == "INT":
@@ -112,11 +112,11 @@ class Parser():
             # operation = Parser.tokens.selectNext()
             # if operation.type == "INT":
             #     raise SyntaxError("Expected valid operation, instead got integer")
-        print(f"Term {result=}")
+        # print(f"Term {result=}")
         return result
 
     def parseFactor():
-        print(Parser.tokens.actual , " FACTOR")
+        # print(Parser.tokens.actual , " FACTOR")
         operation = Parser.tokens.actual
         if operation.type == "INT":
             Parser.tokens.selectNext()
@@ -157,7 +157,7 @@ def main(argv: list, argc: int):
     _ = Parser()
     _ = Prepro()
 
-    Parser.debug_run(Prepro.filter(argv[1]))
+    # Parser.debug_run(Prepro.filter(argv[1]))
     print(Parser.run(Prepro.filter(argv[1])))
     return 0
 
