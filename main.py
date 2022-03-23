@@ -87,7 +87,7 @@ class Node:
         pass
 
     def __str__(self):
-        return f'Node({self.value})=>[{[str(n) for n in self.children]}]'
+        return f'Node({self.value})=>[{[n for n in self.children]}]'
 
     def __repr__(self):
         return self.__str__()
@@ -163,10 +163,10 @@ class Parser():
             return IntVal(value=operation.value, children=[])
         elif operation.type == "PLUS":
             Parser.tokens.selectNext()
-            return UnOp(value='+', children=Parser.parseFactor())
+            return UnOp(value='+', children=[Parser.parseFactor()])
         elif operation.type == "MINUS":
             Parser.tokens.selectNext()
-            return UnOp(value='-', children=Parser.parseFactor())
+            return UnOp(value='-', children=[Parser.parseFactor()])
         elif operation.type == "OP":
             Parser.tokens.selectNext()
             node = Parser.parseExpression()
