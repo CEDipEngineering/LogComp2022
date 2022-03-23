@@ -1,3 +1,4 @@
+from plistlib import InvalidFileException
 import string
 import sys
 import re
@@ -198,7 +199,16 @@ def main(argv: list, argc: int):
     _ = Prepro()
 
     # Parser.debug_run(Prepro.filter(argv[1]))
-    root = Parser.run(Prepro.filter(argv[1]))
+    try:
+        if not argv[1].endswith('.c'):
+            raise InvalidFileException("Message must be of type '.c'")
+        with open(argv[1], 'r') as f:
+            word = f.read()
+    except FileNotFoundError:
+        print("vish, nn achei esse arquivo nn :(")
+        raise FileNotFoundError
+
+    root = Parser.run(Prepro.filter(word))
     # print(root)
     print(root.evaluate())
     return 0
