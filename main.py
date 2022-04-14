@@ -252,6 +252,7 @@ class Parser():
 
     def parseStatement():
         if Parser.tokens.actual.type == "SEMICOL":
+            Parser.tokens.selectNext()
             return NoOp(None, [])
         elif Parser.tokens.actual.type == "IDENT":
             curr_token = Parser.tokens.actual
