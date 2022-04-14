@@ -4,8 +4,6 @@ import sys
 import re
 from typing import List
 
-from pyparsing import ParseExpression
-
 class SymbolTable():
     def __init__(self):
         self._table = {}
