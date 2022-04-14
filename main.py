@@ -4,6 +4,27 @@ import sys
 import re
 from typing import List
 
+from pyparsing import ParseExpression
+
+class SymbolTable():
+    def __init__(self):
+        self._table = {}
+        self._reservedWords = ['printf']
+
+    def isReserved(self, word):
+        return word in self._reservedWords
+
+    def assign(self, name, value):
+        self._table[name] = value
+
+    def retrieve(self, name):
+        try:
+            return self._table[name]
+        except Exception:
+            raise NameError("Variable '{0}' referenced before assignment".format(name))
+
+ST = SymbolTable()
+
 class Token():
     def __init__(self, type, value):
         self.type: str = type
@@ -30,8 +51,6 @@ class Tokenizer():
     
     def selectNext(self) -> Token:
         self.actual = self._advance()
-        # print("AVANCEI TOKEN ", self.actual)
-        # print(self.actual)
         return self.actual
 
     def _advance(self):
@@ -57,7 +76,29 @@ class Tokenizer():
         elif self.origin[self.position] == ")":
             token = Token("CP", self.origin[self.position])
             self.position += 1
-        elif (re.match("[0-9]|\s", self.origin[self.position]) != None):
+        elif self.origin[self.position] == '=':
+            token = Token("ASSIGN", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position] == "{":
+            token = Token("OCB", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position] == "}":
+            token = Token("CCB", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position] == ";":
+            token = Token("SEMICOL", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position].isalpha():
+            ident = self.origin[self.position]
+            self.position+=1
+            while self.origin[self.position].isalpha() or self.origin[self.position].isdigit() or self.origin[self.position] == '_':
+                ident+=self.origin[self.position]
+                self.position+=1
+            if ST.isReserved(ident):
+                token = Token("PRINTF", ident)
+            else:
+                token = Token("IDENT", ident)
+        elif (re.match("[0-9]|\s|\n", self.origin[self.position]) != None):
             # Acumulate number by concat
             acum = ""
             # If is not digit, advance 
@@ -88,7 +129,7 @@ class Node:
         pass
 
     def __str__(self):
-        return f'Node({self.value})=>[{[n for n in self.children]}]'
+        return f'Node({self.value})=>[{" ".join([str(n) for n in self.children])}]'
 
     def __repr__(self):
         return self.__str__()
@@ -114,6 +155,22 @@ class UnOp(Node):
 class IntVal(Node):
     def evaluate(self):
         return self.value
+
+class Block(Node):
+    def evaluate(self):
+        [f.evaluate() for f in self.children]
+
+class Assignment(Node):
+    def evaluate(self):
+        ST.assign(self.children[0].value, self.children[1].evaluate())
+
+class Printf(Node):
+    def evaluate(self):
+        print(self.children[0].evaluate())
+
+class Identifier(Node):
+    def evaluate(self):
+        return ST.retrieve(self.value)
 
 class NoOp(Node):
     def evaluate(self):
@@ -162,6 +219,9 @@ class Parser():
         if operation.type == "INT":
             Parser.tokens.selectNext()
             return IntVal(value=operation.value, children=[])
+        elif operation.type == "IDENT":
+            Parser.tokens.selectNext()
+            return Identifier(value=operation.value, children=[])
         elif operation.type == "PLUS":
             Parser.tokens.selectNext()
             return UnOp(value='+', children=[Parser.parseFactor()])
@@ -179,10 +239,47 @@ class Parser():
         else:
             raise SyntaxError("Expected INT, +, -, or parentheses")
 
+    def parseBlock():
+        if Parser.tokens.actual.type == "OCB":
+            Parser.tokens.selectNext()
+            if Parser.tokens.actual.type == "CCB":
+                return Block("EL BLOCO", [])
+            opList = []
+            while Parser.tokens.actual.type != "CCB":
+                opList.append(Parser.parseStatement())
+            Parser.tokens.selectNext() # Consume CCB
+            return Block("EL BLOCO", opList)
+        else:
+            raise Exception("Missing block opener {")
+
+    def parseStatement():
+        if Parser.tokens.actual.type == "SEMICOL":
+            return NoOp(None, [])
+        elif Parser.tokens.actual.type == "IDENT":
+            curr_token = Parser.tokens.actual
+            Parser.tokens.selectNext()
+            if Parser.tokens.actual.type != 'ASSIGN':
+                raise SyntaxError("Invalid solitary identifier encountered {0}".format(curr_token.value))
+            Parser.tokens.selectNext()
+            node = Assignment("=", [Identifier(curr_token.value,[]), Parser.parseExpression()])
+        elif Parser.tokens.actual.type == "PRINTF":
+            Parser.tokens.selectNext()
+            if Parser.tokens.actual.type != "OP":
+                raise SyntaxError("Function call must contain arguments between paretheses")
+            Parser.tokens.selectNext()
+            node = Printf('Printf', [Parser.parseExpression()])
+            if Parser.tokens.actual.type != "CP":
+                raise SyntaxError("Function call must contain arguments between paretheses")
+            Parser.tokens.selectNext()
+        if Parser.tokens.actual.type != "SEMICOL":
+            raise SyntaxError("Expected ; end of statement")
+        Parser.tokens.selectNext()
+        return node
+
     def run(source: str):
         ## Inicializa Tokenizer, roda Parser, retorna parseExpression()
         Parser.tokens = Tokenizer(source)
-        result = Parser.parseExpression()
+        result = Parser.parseBlock()
         if Parser.tokens.actual.type != "EOF":
             raise SyntaxError("Failed to reach EOF")
         return result
@@ -207,10 +304,9 @@ def main(argv: list, argc: int):
     except FileNotFoundError:
         print("vish, nn achei esse arquivo nn :(")
         raise FileNotFoundError
-
     root = Parser.run(Prepro.filter(word))
-    # print(root)
-    print(root.evaluate())
+    root.evaluate()
+    # Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     return 0
 
 if __name__ == "__main__":
