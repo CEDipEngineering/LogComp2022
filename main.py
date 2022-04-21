@@ -296,6 +296,12 @@ class Parser():
             return Identifier(value=operation.value, children=[])
         elif operation.type == "SCANF":
             Parser.tokens.selectNext()
+            if Parser.tokens.actual.type != "OP":
+                raise Exception("Scanf function call requires open parentheses")
+            Parser.tokens.selectNext()
+            if Parser.tokens.actual.type != "CP":
+                raise Exception("Scanf function call requires open and close parentheses")
+            Parser.tokens.selectNext()
             return Scanf(value=operation.value, children=[])
         elif operation.type == "PLUS":
             Parser.tokens.selectNext()
@@ -343,6 +349,7 @@ class Parser():
                 raise SyntaxError("Invalid solitary identifier encountered {0}".format(curr_token.value))
             Parser.tokens.selectNext()
             node = Assignment("=", [Identifier(curr_token.value,[]), Parser.parseRelExpr()])
+            print(node)
             needs_semi_col = True
         elif Parser.tokens.actual.type == "PRINTF":
             Parser.tokens.selectNext()
@@ -419,10 +426,10 @@ def main(argv: list, argc: int):
     except FileNotFoundError:
         print("vish, nn achei esse arquivo nn :(")
         raise FileNotFoundError
+    Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     root = Parser.run(Prepro.filter(word))
-    # print(root)
+    print(root)
     root.evaluate()
-    # Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     return 0
 
 if __name__ == "__main__":
