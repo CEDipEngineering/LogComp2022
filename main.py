@@ -349,7 +349,6 @@ class Parser():
                 raise SyntaxError("Invalid solitary identifier encountered {0}".format(curr_token.value))
             Parser.tokens.selectNext()
             node = Assignment("=", [Identifier(curr_token.value,[]), Parser.parseRelExpr()])
-            print(node)
             needs_semi_col = True
         elif Parser.tokens.actual.type == "PRINTF":
             Parser.tokens.selectNext()
@@ -426,9 +425,9 @@ def main(argv: list, argc: int):
     except FileNotFoundError:
         print("vish, nn achei esse arquivo nn :(")
         raise FileNotFoundError
-    Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
+    # Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     root = Parser.run(Prepro.filter(word))
-    print(root)
+    # print(root)
     root.evaluate()
     return 0
 
