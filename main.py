@@ -3,16 +3,30 @@ import sys
 import re
 from typing import List
 
+from matplotlib.pyplot import table
+
 class SymbolTable():
     def __init__(self):
         self._table = {}
         self._reservedWords = ['printf', 'while', 'if', 'else', 'scanf']
 
-    def isReserved(self, word):
-        return word in self._reservedWords
+    def isReserved(self, name):
+        return name in self._reservedWords
+
+    def declare(self, name, typ):
+        if name in self._table.keys():
+            raise Exception(f"Variable {name} already declared")
+        self._table[name] = (None, typ)
+        
 
     def assign(self, name, value):
-        self._table[name] = value
+        if name not in self._table.keys():
+            raise Exception(f"Local variable {name} assigned before declaration")
+        typ = self._table[name][1]
+        if value[1] == typ:
+            self._table[name] = (value[0], typ)
+        else:
+            raise Exception(f"Variable assigned wrong type: {name} is {typ} tried to put {type(value)}({value})")
 
     def retrieve(self, name):
         try:
@@ -25,7 +39,7 @@ ST = SymbolTable()
 class Token():
     def __init__(self, type, value):
         self.type: str = type
-        self.value: int = value
+        self.value = value
 
     def __str__(self):
         return f"({self.value},{self.type})"
@@ -92,6 +106,21 @@ class Tokenizer():
         elif self.origin[self.position] == ">":
             token = Token("GT", self.origin[self.position])
             self.position += 1
+        elif self.origin[self.position] == ".":
+            token = Token("CAT", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position] == ",":
+            token = Token("COM", self.origin[self.position])
+            self.position += 1
+        elif self.origin[self.position] == '"':
+            # String
+            acum = ""
+            self.position += 1
+            while self.origin[self.position] != '"':
+                acum += self.origin[self.position]
+                self.position += 1
+            self.position+=1
+            token = Token("STR", acum)
         elif self.origin[self.position] == "<":
             token = Token("LT", self.origin[self.position])
             self.position += 1
@@ -118,6 +147,10 @@ class Tokenizer():
                 self.position+=1
             if ST.isReserved(ident):
                 token = Token(ident.upper(), ident) ## Return a token of reserved operation
+            elif ident.lower() == "int":
+                token = Token("TYPE", ident)
+            elif ident.lower() == "str":
+                token = Token("TYPE", ident)
             else:
                 token = Token("IDENT", ident)
         elif (re.match("[0-9]|\s|\n", self.origin[self.position]) != None):
@@ -159,40 +192,97 @@ class Node:
 class BinOp(Node):
     def evaluate(self):
         if self.value == '+':
-            return self.children[0].evaluate() + self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != int or b[1] != int:
+                raise Exception("Operation + only defined for int and int")
+            return (a[0] + b[0], int)
         elif self.value == '*':
-            return self.children[0].evaluate() * self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != int or b[1] != int:
+                raise Exception("Operation * only defined for int and int")
+            return (a[0] * b[0], int)
         elif self.value == '-':
-            return self.children[0].evaluate() - self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != int or b[1] != int:
+                raise Exception("Operation - only defined for int and int")
+            return (a[0] - b[0], int)
         elif self.value == '/':
-            return self.children[0].evaluate() // self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != int or b[1] != int:
+                raise Exception("Operation / only defined for int and int")
+            return (a[0] // b[0], int)
         elif self.value == '>':
-            return self.children[0].evaluate() > self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != b[1]:
+                raise Exception("Operation > only defined for two operands of same type")
+            return (a[0] > b[0], int)
         elif self.value == '<':
-            return self.children[0].evaluate() < self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != b[1]:
+                raise Exception("Operation < only defined for two operands of same type")
+            return (a[0] < b[0], int)
         elif self.value == '==':
-            return self.children[0].evaluate() == self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != b[1]:
+                raise Exception("Operation == only defined for two operands of same type")
+            return (a[0] == b[0], int)
         elif self.value == '&&':
-            return self.children[0].evaluate() and self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != int or b[1] != int:
+                raise Exception("Operation && only defined for types int and int")
+            return (a[0] and b[0], int)
         elif self.value == '||':
-            return self.children[0].evaluate() or self.children[1].evaluate()
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            if a[1] != int or b[1] != int:
+                raise Exception("Operation || only defined for types int and int")
+            return (a[0] or b[0], int)
+        elif self.value == '.':
+            a = self.children[0].evaluate()
+            b = self.children[1].evaluate()
+            return (str(a[0]) + str(b[0]), str)
         
 class UnOp(Node):
     def evaluate(self):
         if self.value == '+':
-            return self.children[0].evaluate()
+            a = self.children[0].evaluate()
+            if a[1] != int:
+                raise Exception("Unary operator + only valid for integers")
+            return (a, int)
         elif self.value == '-':
-            return -self.children[0].evaluate()
+            a = self.children[0].evaluate()
+            if a[1] != int:
+                raise Exception("Unary operator - only valid for integers")
+            return (-a, int)
         elif self.value == '!':
-            return not self.children[0].evaluate()
+            a = self.children[0].evaluate()
+            if a[1] != int:
+                raise Exception("Unary operator 'not' only valid for integers")
+            return (not a, int)
 
 class IntVal(Node):
     def evaluate(self):
-        return self.value
+        return (self.value, int)
+
+class StrVal(Node):
+    def evaluate(self):
+        return (self.value, str)
 
 class Block(Node):
     def evaluate(self):
         [f.evaluate() for f in self.children]
+
+class VarDec(Node):
+    def evaluate(self):
+        [ST.declare(name.value, self.value) for name in self.children]
 
 class Assignment(Node):
     def evaluate(self):
@@ -200,7 +290,7 @@ class Assignment(Node):
 
 class Printf(Node):
     def evaluate(self):
-        print(self.children[0].evaluate())
+        print(self.children[0].evaluate()[0])
 
 class Identifier(Node):
     def evaluate(self):
@@ -212,7 +302,7 @@ class NoOp(Node):
 
 class Scanf(Node):
     def evaluate(self):
-        return int(input())
+        return (int(input()), int)
 
 class If(Node):
     def evaluate(self):
@@ -249,7 +339,7 @@ class Parser():
         # print(Parser.tokens.actual , " EXPRESSION")
         node = Parser.parseTerm()
         operation = Parser.tokens.actual
-        while operation.type == "PLUS" or operation.type == "MINUS" or operation.type == "OR":
+        while operation.type == "PLUS" or operation.type == "MINUS" or operation.type == "OR" or operation.type == "CAT":
             Parser.tokens.selectNext()
             if operation.type == "PLUS":
                 node = BinOp(value='+', children=[node, Parser.parseTerm()])
@@ -257,9 +347,10 @@ class Parser():
                 node = BinOp(value='-', children=[node, Parser.parseTerm()])
             elif operation.type == "OR":
                 node = BinOp(value='||', children=[node, Parser.parseTerm()])
+            elif operation.type == "CAT":
+                node = BinOp(value='.', children=[node, Parser.parseTerm()])
             operation = Parser.tokens.actual
-            if operation.type == "INT":
-                raise SyntaxError("Expected valid operation, instead got integer")
+        # print(f"Expr return {node=}")
         return node
 
     def parseTerm():
@@ -291,6 +382,9 @@ class Parser():
         if operation.type == "INT":
             Parser.tokens.selectNext()
             return IntVal(value=operation.value, children=[])
+        if operation.type == "STR":
+            Parser.tokens.selectNext()
+            return StrVal(value=operation.value, children=[])
         elif operation.type == "IDENT":
             Parser.tokens.selectNext()
             return Identifier(value=operation.value, children=[])
@@ -350,6 +444,27 @@ class Parser():
             Parser.tokens.selectNext()
             node = Assignment("=", [Identifier(curr_token.value,[]), Parser.parseRelExpr()])
             needs_semi_col = True
+        elif Parser.tokens.actual.type == "TYPE":
+            # print(Parser.tokens.actual)
+            curr_token = Parser.tokens.actual
+            Parser.tokens.selectNext()
+            if Parser.tokens.actual.type != 'IDENT':
+                raise SyntaxError("Type declaration must be followed by valid identifier, instead got {0}".format(curr_token.value))
+            opList = [Identifier(Parser.tokens.actual.value, [])]
+            Parser.tokens.selectNext()
+            while Parser.tokens.actual.type != "SEMICOL":
+                if Parser.tokens.actual.type != "COM":
+                    raise Exception("Type declaration must be list of identifiers separated by commas")
+                Parser.tokens.selectNext()
+                opList.append(Identifier(Parser.tokens.actual.value, []))
+                Parser.tokens.selectNext()
+            if curr_token.value.lower() == 'int':
+                node = VarDec(int, opList)
+            elif curr_token.value.lower() == 'str':
+                node = VarDec(str, opList)
+            else:
+                raise Exception("Undefined type declaration")
+            needs_semi_col = True
         elif Parser.tokens.actual.type == "PRINTF":
             Parser.tokens.selectNext()
             if Parser.tokens.actual.type != "OP":
@@ -389,6 +504,7 @@ class Parser():
             else:
                 elsestmt = NoOp(None, [])
             node = If(value="If", children=[relexp, content, elsestmt])
+        # print(f"Statement node {node}")
         if needs_semi_col:
             if Parser.tokens.actual.type != "SEMICOL":
                 raise SyntaxError("Expected ; end of statement")
@@ -416,7 +532,6 @@ def main(argv: list, argc: int):
     _ = Parser()
     _ = Prepro()
 
-    # Parser.debug_run(Prepro.filter(argv[1]))
     try:
         if not argv[1].endswith('.c'):
             raise Exception("Provided path to file must end with '.c'")
