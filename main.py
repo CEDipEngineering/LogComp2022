@@ -3,8 +3,6 @@ import sys
 import re
 from typing import List
 
-from matplotlib.pyplot import table
-
 class SymbolTable():
     def __init__(self):
         self._table = {}
