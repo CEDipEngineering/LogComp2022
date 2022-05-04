@@ -304,14 +304,14 @@ class Scanf(Node):
 
 class If(Node):
     def evaluate(self):
-        if self.children[0].evaluate():
+        if self.children[0].evaluate()[0]:
             self.children[1].evaluate()
         else:
             self.children[2].evaluate()
 
 class While(Node):
     def evaluate(self):
-        while(self.children[0].evaluate()):
+        while(self.children[0].evaluate()[0]):
             self.children[1].evaluate()
 
 class Parser():
