@@ -194,55 +194,55 @@ class BinOp(Node):
             b = self.children[1].evaluate()
             if a[1] != int or b[1] != int:
                 raise Exception("Operation + only defined for int and int")
-            return (a[0] + b[0], int)
+            return (int(a[0] + b[0]), int)
         elif self.value == '*':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != int or b[1] != int:
                 raise Exception("Operation * only defined for int and int")
-            return (a[0] * b[0], int)
+            return (int(a[0] * b[0]), int)
         elif self.value == '-':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != int or b[1] != int:
                 raise Exception("Operation - only defined for int and int")
-            return (a[0] - b[0], int)
+            return (int(a[0] - b[0]), int)
         elif self.value == '/':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != int or b[1] != int:
                 raise Exception("Operation / only defined for int and int")
-            return (a[0] // b[0], int)
+            return (int(a[0] // b[0]), int)
         elif self.value == '>':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != b[1]:
                 raise Exception("Operation > only defined for two operands of same type")
-            return (a[0] > b[0], int)
+            return (int(a[0] > b[0]), int)
         elif self.value == '<':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != b[1]:
                 raise Exception("Operation < only defined for two operands of same type")
-            return (a[0] < b[0], int)
+            return (int(a[0] < b[0]), int)
         elif self.value == '==':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != b[1]:
                 raise Exception("Operation == only defined for two operands of same type")
-            return (a[0] == b[0], int)
+            return (int(a[0] == b[0]), int)
         elif self.value == '&&':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != int or b[1] != int:
                 raise Exception("Operation && only defined for types int and int")
-            return (a[0] and b[0], int)
+            return (int(a[0] and b[0]), int)
         elif self.value == '||':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
             if a[1] != int or b[1] != int:
                 raise Exception("Operation || only defined for types int and int")
-            return (a[0] or b[0], int)
+            return (int(a[0] or b[0]), int)
         elif self.value == '.':
             a = self.children[0].evaluate()
             b = self.children[1].evaluate()
@@ -254,17 +254,17 @@ class UnOp(Node):
             a = self.children[0].evaluate()
             if a[1] != int:
                 raise Exception("Unary operator + only valid for integers")
-            return (a, int)
+            return (a[0], int)
         elif self.value == '-':
             a = self.children[0].evaluate()
             if a[1] != int:
                 raise Exception("Unary operator - only valid for integers")
-            return (-a, int)
+            return (-a[0], int)
         elif self.value == '!':
             a = self.children[0].evaluate()
             if a[1] != int:
                 raise Exception("Unary operator 'not' only valid for integers")
-            return (not a, int)
+            return (not a[0], int)
 
 class IntVal(Node):
     def evaluate(self):
