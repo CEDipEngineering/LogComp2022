@@ -1,4 +1,4 @@
 {
-x=scanf();
-printf(x);
+int x;
+x = 0;
 }

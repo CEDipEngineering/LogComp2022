@@ -7,6 +7,7 @@ class SymbolTable():
     def __init__(self):
         self._table = {}
         self._reservedWords = ['printf', 'while', 'if', 'else', 'scanf']
+        self.varCount = 0
 
     def isReserved(self, name):
         return name in self._reservedWords
@@ -14,21 +15,26 @@ class SymbolTable():
     def declare(self, name, typ):
         if name in self._table.keys():
             raise Exception(f"Variable {name} already declared")
-        self._table[name] = (None, typ)
+        FileWriter.write('PUSH DWORD 0 ; Declare {0}'.format(name))
+        self._table[name] = (None, typ, self.varCount)
+        self.varCount += 4
         
 
     def assign(self, name, value):
         if name not in self._table.keys():
             raise Exception(f"Local variable {name} assigned before declaration")
-        typ = self._table[name][1]
-        if value[1] == typ:
-            self._table[name] = (value[0], typ)
-        else:
-            raise Exception(f"Variable assigned wrong type: {name} is {typ} tried to put {type(value)}({value})")
+        # typ = self._table[name][1]
+        FileWriter.write('MOV [EBP -{0}], {1}'.format(self._table[name][2], self._table[name][0]))
+        self._table[name] = (value[0], int, self._table[name][2])
+        # if True:#value[1] == typ:
+        # else:
+        #     raise Exception(f"Variable assigned wrong type: {name} is {typ} tried to put {type(value)}({value})")
 
     def retrieve(self, name):
         try:
-            return self._table[name]
+            var = self._table[name]
+            FileWriter.write('MOV EBX, [EBP -{0}]'.format(var[2]))
+            return var
         except Exception:
             raise NameError("Variable '{0}' referenced before assignment".format(name))
 
@@ -174,9 +180,16 @@ class Tokenizer():
             curr_token = self._advance()
 
 class Node:
+    id = 0
+    def newId():
+        t = Node.id
+        Node.id += 1
+        return t
+
     def __init__(self, value, children: List['Node']):
         self.value = value
         self.children = children
+        self.id = Node.newId()
 
     def evaluate(self):
         pass
@@ -191,84 +204,136 @@ class BinOp(Node):
     def evaluate(self):
         if self.value == '+':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != int or b[1] != int:
-                raise Exception("Operation + only defined for int and int")
-            return (a[0] + b[0], int)
+            # if a[1] != int or b[1] != int:
+            #     raise Exception("Operation + only defined for int and int")
+            FileWriter.write('POP EAX')
+            FileWriter.write('ADD EAX, EBX')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] + b[0], int)
         elif self.value == '*':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != int or b[1] != int:
-                raise Exception("Operation * only defined for int and int")
-            return (a[0] * b[0], int)
+            # if a[1] != int or b[1] != int:
+            #     raise Exception("Operation * only defined for int and int")
+            FileWriter.write('POP EAX')
+            FileWriter.write('IMUL EBX')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] * b[0], int)
         elif self.value == '-':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != int or b[1] != int:
-                raise Exception("Operation - only defined for int and int")
-            return (a[0] - b[0], int)
+            # if a[1] != int or b[1] != int:
+            #     raise Exception("Operation - only defined for int and int")
+            FileWriter.write('POP EAX')
+            FileWriter.write('SUB EAX, EBX')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] - b[0], int)
         elif self.value == '/':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != int or b[1] != int:
-                raise Exception("Operation / only defined for int and int")
-            return (a[0] // b[0], int)
+            # if a[1] != int or b[1] != int:
+            #     raise Exception("Operation / only defined for int and int")
+            FileWriter.write('POP EAX')
+            FileWriter.write('IDIV EBX')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] // b[0], int)
         elif self.value == '>':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != b[1]:
-                raise Exception("Operation > only defined for two operands of same type")
-            return (a[0] > b[0], int)
+            # if a[1] != b[1]:
+            #     raise Exception("Operation > only defined for two operands of same type")
+            FileWriter.write('POP EAX')
+            FileWriter.write('CMP EAX, EBX')
+            FileWriter.write('CALL binop_jg')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] > b[0], int)
         elif self.value == '<':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != b[1]:
-                raise Exception("Operation < only defined for two operands of same type")
-            return (a[0] < b[0], int)
+            # if a[1] != b[1]:
+            #     raise Exception("Operation < only defined for two operands of same type")
+            FileWriter.write('POP EAX')
+            FileWriter.write('CMP EAX, EBX')
+            FileWriter.write('CALL binop_jl')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] < b[0], int)
         elif self.value == '==':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != b[1]:
-                raise Exception("Operation == only defined for two operands of same type")
-            return (a[0] == b[0], int)
+            # if a[1] != b[1]:
+            #     raise Exception("Operation == only defined for two operands of same type")
+            FileWriter.write('POP EAX')
+            FileWriter.write('CMP EAX, EBX')
+            FileWriter.write('CALL binop_je')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] == b[0], int)
         elif self.value == '&&':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != int or b[1] != int:
-                raise Exception("Operation && only defined for types int and int")
-            return (a[0] and b[0], int)
+            # if a[1] != int or b[1] != int:
+            #     raise Exception("Operation && only defined for types int and int")
+            FileWriter.write('POP EAX')
+            FileWriter.write('AND EAX, EBX')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] and b[0], int)
         elif self.value == '||':
             a = self.children[0].evaluate()
+            FileWriter.write('PUSH EBX')
             b = self.children[1].evaluate()
-            if a[1] != int or b[1] != int:
-                raise Exception("Operation || only defined for types int and int")
-            return (a[0] or b[0], int)
+            # if a[1] != int or b[1] != int:
+            #     raise Exception("Operation || only defined for types int and int")
+            FileWriter.write('POP EAX')
+            FileWriter.write('OR EAX, EBX')
+            FileWriter.write('MOV EBX, EAX')
+            # return (a[0] or b[0], int)
         elif self.value == '.':
-            a = self.children[0].evaluate()
-            b = self.children[1].evaluate()
-            return (str(a[0]) + str(b[0]), str)
-        
+        #     a = self.children[0].evaluate()
+        #     FileWriter.write('PUSH EBX')
+        #     b = self.children[1].evaluate()
+        #     FileWriter.write('POP EAX')
+        #     FileWriter.write('ADD EAX, EBX')
+        #     FileWriter.write('MOV EBX, EAX')
+        #     return (str(a[0]) + str(b[0]), str)
+            pass
+
 class UnOp(Node):
     def evaluate(self):
         if self.value == '+':
             a = self.children[0].evaluate()
-            if a[1] != int:
-                raise Exception("Unary operator + only valid for integers")
-            return (a, int)
+            # if a[1] != int:
+            #     raise Exception("Unary operator + only valid for integers")
+            FileWriter.write('MOV EBX, {0}'.format(a[0]))
+            # return (a, int)
         elif self.value == '-':
             a = self.children[0].evaluate()
-            if a[1] != int:
-                raise Exception("Unary operator - only valid for integers")
-            return (-a, int)
+            # if a[1] != int:
+            #     raise Exception("Unary operator - only valid for integers")
+            FileWriter.write('MOV EBX, {0}'.format(a[0]))
+            FileWriter.write('NEG EBX')
+            # return (-a, int)
         elif self.value == '!':
             a = self.children[0].evaluate()
-            if a[1] != int:
-                raise Exception("Unary operator 'not' only valid for integers")
-            return (not a, int)
+            # if a[1] != int:
+            #     raise Exception("Unary operator 'not' only valid for integers")
+            FileWriter.write('MOV EBX, {0}'.format(a[0]))
+            FileWriter.write('NOT EBX')
+            # return (not a, int)
+            pass
 
 class IntVal(Node):
     def evaluate(self):
-        return (self.value, int)
+        FileWriter.write('MOV EBX, {0}'.format(self.value))
+        # return (self.value, int)
+        pass
 
 class StrVal(Node):
     def evaluate(self):
@@ -288,11 +353,16 @@ class Assignment(Node):
 
 class Printf(Node):
     def evaluate(self):
-        print(self.children[0].evaluate()[0])
+        a = self.children[0].evaluate()
+        FileWriter.write('PUSH EBX')
+        FileWriter.write('CALL print')
+        FileWriter.write('POP EBX')
+        # print(a[0])
+        pass
 
 class Identifier(Node):
     def evaluate(self):
-        return ST.retrieve(self.value)
+        ST.retrieve(self.value)
 
 class NoOp(Node):
     def evaluate(self):
@@ -304,16 +374,27 @@ class Scanf(Node):
 
 class If(Node):
     def evaluate(self):
-        if self.children[0].evaluate()[0]:
-            self.children[1].evaluate()
-        else:
-            self.children[2].evaluate()
+        id = Node.id
+        self.children[0].evaluate()
+        FileWriter.write('CMP EBX, False')
+        FileWriter.write('JE ELSE_{0}'.format(Node.id))
+        self.children[1].evaluate()
+        FileWriter.write('JMP EXIT_IF_{0}'.format(Node.id))
+        FileWriter.write('ELSE_{0}:'.format(Node.id))
+        self.children[2].evaluate()
+        FileWriter.write('EXIT_IF_{0}:'.format(Node.id))
 
 class While(Node):
     def evaluate(self):
-        while(self.children[0].evaluate()[0]):
-            self.children[1].evaluate()
-
+        id = Node.id
+        FileWriter.write('LOOP_{0}:'.format())
+        self.children[0].evaluate()
+        FileWriter.write('CMP EBX, False')
+        FileWriter.write('JE EXIT_{0}'.format(Node.id))
+        self.children[1].evaluate()
+        FileWriter.write('JMP LOOP_{0}'.format())
+        FileWriter.write('EXIT_{0}:'.format(Node.id))
+        
 class Parser():
     tokens: Tokenizer
 
@@ -523,6 +604,106 @@ class Parser():
         Parser.tokens = Tokenizer(source)
         return Parser.tokens.dump_tokens()
 
+class FileWriter():
+    fn: str
+    out_s: str
+
+    def __init__(fn) -> None:
+        FileWriter.fn = fn 
+        FileWriter.out_s = '''
+            ; constantes
+            SYS_EXIT equ 1
+            SYS_READ equ 3
+            SYS_WRITE equ 4
+            STDIN equ 0
+            STDOUT equ 1
+            True equ 1
+            False equ 0
+
+            segment .data
+
+            segment .bss  ; variaveis
+            res RESB 1
+
+            section .text
+            global _start
+
+            print:  ; subrotina print
+
+            PUSH EBP ; guarda o base pointer
+            MOV EBP, ESP ; estabelece um novo base pointer
+
+            MOV EAX, [EBP+8] ; 1 argumento antes do RET e EBP
+            XOR ESI, ESI
+
+            print_dec: ; empilha todos os digitos
+            MOV EDX, 0
+            MOV EBX, 0x000A
+            DIV EBX
+            ADD EDX, '0'
+            PUSH EDX
+            INC ESI ; contador de digitos
+            CMP EAX, 0
+            JZ print_next ; quando acabar pula
+            JMP print_dec
+
+            print_next:
+            CMP ESI, 0
+            JZ print_exit ; quando acabar de imprimir
+            DEC ESI
+
+            MOV EAX, SYS_WRITE
+            MOV EBX, STDOUT
+
+            POP ECX
+            MOV [res], ECX
+            MOV ECX, res
+
+            MOV EDX, 1
+            INT 0x80
+            JMP print_next
+
+            print_exit:
+            POP EBP
+            RET
+
+            ; subrotinas if/while
+            binop_je:
+            JE binop_true
+            JMP binop_false
+
+            binop_jg:
+            JG binop_true
+            JMP binop_false
+
+            binop_jl:
+            JL binop_true
+            JMP binop_false
+
+            binop_false:
+            MOV EBX, False
+            JMP binop_exit
+            binop_true:
+            MOV EBX, True
+            binop_exit:
+            RET
+
+            _start:
+
+            PUSH EBP ; guarda o base pointer
+            MOV EBP, ESP ; estabelece um novo base pointer
+
+            ; codigo gerado pelo compilador
+            MOV EDX, 0
+            '''
+
+    def write(line: str):
+        FileWriter.out_s += line + '\n'
+
+    def dump():
+        with open(FileWriter.fn, 'r') as f:
+            f.open(FileWriter.out_s + '; interrupcao de saida\nPOP EBP\nMOV EAX, 1\nINT 0x80\n')
+
 def main(argv: list, argc: int):
     if argc < 2:
         print("Send more args plz")
@@ -538,10 +719,14 @@ def main(argv: list, argc: int):
     except FileNotFoundError:
         print("vish, nn achei esse arquivo nn :(")
         raise FileNotFoundError
+
+    _ = FileWriter()
+    FileWriter.fn = word[:-2]
     # Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     root = Parser.run(Prepro.filter(word))
     # print(root)
     root.evaluate()
+    FileWriter.dump()
     return 0
 
 if __name__ == "__main__":
