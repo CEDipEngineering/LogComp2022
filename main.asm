@@ -98,7 +98,6 @@ MOV EBX, 2 ; Eval IntVal Node
 POP EAX
 CMP EAX, EBX
 CALL binop_jg
-MOV EBX, EAX
 CMP EBX, False ; if condition is false, jump to else
 JE ELSE_14
 ; if condition is true, evaluate true statement
@@ -130,7 +129,6 @@ MOV EBX, 0 ; Eval IntVal Node
 POP EAX
 CMP EAX, EBX
 CALL binop_jg
-MOV EBX, EAX
 CMP EBX, False ; if condition is false, exit
 JE EXIT_26
 MOV EBX, [EBP-4] ; Retrieve variable x from memory

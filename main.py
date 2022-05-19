@@ -252,7 +252,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_jg')
-            FileWriter.write('MOV EBX, EAX')
+            # FileWriter.write('MOV EBX, EAX')
             return (a[0] > b[0], int)
         elif self.value == '<':
             a = self.children[0].evaluate()
@@ -263,7 +263,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_jl')
-            FileWriter.write('MOV EBX, EAX')
+            # FileWriter.write('MOV EBX, EAX')
             return (a[0] < b[0], int)
         elif self.value == '==':
             a = self.children[0].evaluate()
@@ -274,7 +274,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_je')
-            FileWriter.write('MOV EBX, EAX')
+            # FileWriter.write('MOV EBX, EAX')
             return (a[0] == b[0], int)
         elif self.value == '&&':
             a = self.children[0].evaluate()
