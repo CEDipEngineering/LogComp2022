@@ -376,7 +376,7 @@ class Scanf(Node):
 
 class If(Node):
     def evaluate(self):
-        id = Node.id
+        id = self.id
         FileWriter.write('\n; begin if statement')
         FileWriter.write('; evaluate condition {0}'.format(self.children[0]))
         self.children[0].evaluate()
@@ -393,7 +393,7 @@ class If(Node):
 
 class While(Node):
     def evaluate(self):
-        id = Node.id
+        id = self.id
         FileWriter.write('\n; begin while loop')
         FileWriter.write('LOOP_{0}:'.format(id))
         self.children[0].evaluate()

@@ -85,6 +85,70 @@ MOV EDX, 0
 
 ; codigo gerado pelo compilador
 
+PUSH DWORD 0 ; Declare x
+MOV EBX, 3 ; Eval IntVal Node
+MOV [EBP-4], EBX ; x = 3
+
+; begin if statement
+; evaluate condition Node(>)=>[Node(x)=>[] Node(2)=>[]]
+; Evaluating BinOp >
+MOV EBX, [EBP-4] ; Retrieve variable x from memory
+PUSH EBX
+MOV EBX, 2 ; Eval IntVal Node
+POP EAX
+CMP EAX, EBX
+CALL binop_jg
+MOV EBX, EAX
+CMP EBX, False ; if condition is false, jump to else
+JE ELSE_14
+; if condition is true, evaluate true statement
+MOV EBX, [EBP-4] ; Retrieve variable x from memory
+
+; begin print coroutine
+PUSH EBX ; Push args to stack
+CALL print ; Func call
+POP EBX ; Unstack args
+; exit once true statement is done
+JMP EXIT_IF_14
+ELSE_14:
+MOV EBX, 2 ; Eval IntVal Node
+
+; begin print coroutine
+PUSH EBX ; Push args to stack
+CALL print ; Func call
+POP EBX ; Unstack args
+EXIT_IF_14:
+; end if statement
+
+
+; begin while loop
+LOOP_26:
+; Evaluating BinOp >
+MOV EBX, [EBP-4] ; Retrieve variable x from memory
+PUSH EBX
+MOV EBX, 0 ; Eval IntVal Node
+POP EAX
+CMP EAX, EBX
+CALL binop_jg
+MOV EBX, EAX
+CMP EBX, False ; if condition is false, exit
+JE EXIT_26
+MOV EBX, [EBP-4] ; Retrieve variable x from memory
+
+; begin print coroutine
+PUSH EBX ; Push args to stack
+CALL print ; Func call
+POP EBX ; Unstack args
+; Evaluating BinOp -
+MOV EBX, [EBP-4] ; Retrieve variable x from memory
+PUSH EBX
+MOV EBX, 1 ; Eval IntVal Node
+POP EAX
+SUB EAX, EBX
+MOV EBX, EAX
+MOV [EBP-4], EBX ; x = 2
+JMP LOOP_26
+EXIT_26:
 
 
 ; interrupcao de saida
