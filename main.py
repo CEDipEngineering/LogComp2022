@@ -7,7 +7,7 @@ class SymbolTable():
     def __init__(self):
         self._table = {}
         self._reservedWords = ['printf', 'while', 'if', 'else', 'scanf']
-        self.varCount = 0
+        self.varCount = 4
 
     def isReserved(self, name):
         return name in self._reservedWords
@@ -24,7 +24,7 @@ class SymbolTable():
         if name not in self._table.keys():
             raise Exception(f"Local variable {name} assigned before declaration")
         # typ = self._table[name][1]
-        FileWriter.write('MOV [EBP -{0}], {1}'.format(self._table[name][2], self._table[name][0]))
+        FileWriter.write('MOV [EBP-{0}], EBX ; {2} = {1}'.format(self._table[name][2], value[0], name))
         self._table[name] = (value[0], int, self._table[name][2])
         # if True:#value[1] == typ:
         # else:
@@ -33,7 +33,7 @@ class SymbolTable():
     def retrieve(self, name):
         try:
             var = self._table[name]
-            FileWriter.write('MOV EBX, [EBP -{0}]'.format(var[2]))
+            FileWriter.write('MOV EBX, [EBP-{0}] ; Retrieve variable {1} from memory'.format(var[2], name))
             return var
         except Exception:
             raise NameError("Variable '{0}' referenced before assignment".format(name))
@@ -202,6 +202,7 @@ class Node:
 
 class BinOp(Node):
     def evaluate(self):
+        FileWriter.write('; Evaluating BinOp {0}'.format(self.value))
         if self.value == '+':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -211,7 +212,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('ADD EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] + b[0], int)
+            return (a[0] + b[0], int)
         elif self.value == '*':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -221,7 +222,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('IMUL EBX')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] * b[0], int)
+            return (a[0] * b[0], int)
         elif self.value == '-':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -231,7 +232,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('SUB EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] - b[0], int)
+            return (a[0] - b[0], int)
         elif self.value == '/':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -241,7 +242,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('IDIV EBX')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] // b[0], int)
+            return (a[0] // b[0], int)
         elif self.value == '>':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -252,7 +253,7 @@ class BinOp(Node):
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_jg')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] > b[0], int)
+            return (a[0] > b[0], int)
         elif self.value == '<':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -263,7 +264,7 @@ class BinOp(Node):
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_jl')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] < b[0], int)
+            return (a[0] < b[0], int)
         elif self.value == '==':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -274,7 +275,7 @@ class BinOp(Node):
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_je')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] == b[0], int)
+            return (a[0] == b[0], int)
         elif self.value == '&&':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -284,7 +285,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('AND EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] and b[0], int)
+            return (a[0] and b[0], int)
         elif self.value == '||':
             a = self.children[0].evaluate()
             FileWriter.write('PUSH EBX')
@@ -294,7 +295,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('OR EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            # return (a[0] or b[0], int)
+            return (a[0] or b[0], int)
         elif self.value == '.':
         #     a = self.children[0].evaluate()
         #     FileWriter.write('PUSH EBX')
@@ -302,7 +303,7 @@ class BinOp(Node):
         #     FileWriter.write('POP EAX')
         #     FileWriter.write('ADD EAX, EBX')
         #     FileWriter.write('MOV EBX, EAX')
-        #     return (str(a[0]) + str(b[0]), str)
+            return (str(a[0]) + str(b[0]), str)
             pass
 
 class UnOp(Node):
@@ -311,28 +312,28 @@ class UnOp(Node):
             a = self.children[0].evaluate()
             # if a[1] != int:
             #     raise Exception("Unary operator + only valid for integers")
-            FileWriter.write('MOV EBX, {0}'.format(a[0]))
-            # return (a, int)
+            FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
+            return (a, int)
         elif self.value == '-':
             a = self.children[0].evaluate()
             # if a[1] != int:
             #     raise Exception("Unary operator - only valid for integers")
-            FileWriter.write('MOV EBX, {0}'.format(a[0]))
+            FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
             FileWriter.write('NEG EBX')
-            # return (-a, int)
+            return (-a, int)
         elif self.value == '!':
             a = self.children[0].evaluate()
             # if a[1] != int:
             #     raise Exception("Unary operator 'not' only valid for integers")
-            FileWriter.write('MOV EBX, {0}'.format(a[0]))
+            FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
             FileWriter.write('NOT EBX')
-            # return (not a, int)
+            return (not a, int)
             pass
 
 class IntVal(Node):
     def evaluate(self):
-        FileWriter.write('MOV EBX, {0}'.format(self.value))
-        # return (self.value, int)
+        FileWriter.write('MOV EBX, {0} ; Eval IntVal Node'.format(self.value))
+        return (self.value, int)
         pass
 
 class StrVal(Node):
@@ -354,15 +355,16 @@ class Assignment(Node):
 class Printf(Node):
     def evaluate(self):
         a = self.children[0].evaluate()
-        FileWriter.write('PUSH EBX')
-        FileWriter.write('CALL print')
-        FileWriter.write('POP EBX')
+        FileWriter.write('\n; begin print coroutine')
+        FileWriter.write('PUSH EBX ; Push args to stack')
+        FileWriter.write('CALL print ; Func call')
+        FileWriter.write('POP EBX ; Unstack args')
         # print(a[0])
         pass
 
 class Identifier(Node):
     def evaluate(self):
-        ST.retrieve(self.value)
+        return ST.retrieve(self.value)
 
 class NoOp(Node):
     def evaluate(self):
@@ -375,25 +377,31 @@ class Scanf(Node):
 class If(Node):
     def evaluate(self):
         id = Node.id
+        FileWriter.write('\n; begin if statement')
+        FileWriter.write('; evaluate condition {0}'.format(self.children[0]))
         self.children[0].evaluate()
-        FileWriter.write('CMP EBX, False')
-        FileWriter.write('JE ELSE_{0}'.format(Node.id))
+        FileWriter.write('CMP EBX, False ; if condition is false, jump to else')
+        FileWriter.write('JE ELSE_{0}'.format(id))
+        FileWriter.write('; if condition is true, evaluate true statement')
         self.children[1].evaluate()
-        FileWriter.write('JMP EXIT_IF_{0}'.format(Node.id))
-        FileWriter.write('ELSE_{0}:'.format(Node.id))
+        FileWriter.write('; exit once true statement is done')
+        FileWriter.write('JMP EXIT_IF_{0}'.format(id))
+        FileWriter.write('ELSE_{0}:'.format(id))
         self.children[2].evaluate()
-        FileWriter.write('EXIT_IF_{0}:'.format(Node.id))
+        FileWriter.write('EXIT_IF_{0}:'.format(id))
+        FileWriter.write('; end if statement\n')
 
 class While(Node):
     def evaluate(self):
         id = Node.id
-        FileWriter.write('LOOP_{0}:'.format())
+        FileWriter.write('\n; begin while loop')
+        FileWriter.write('LOOP_{0}:'.format(id))
         self.children[0].evaluate()
-        FileWriter.write('CMP EBX, False')
-        FileWriter.write('JE EXIT_{0}'.format(Node.id))
+        FileWriter.write('CMP EBX, False ; if condition is false, exit')
+        FileWriter.write('JE EXIT_{0}'.format(id))
         self.children[1].evaluate()
-        FileWriter.write('JMP LOOP_{0}'.format())
-        FileWriter.write('EXIT_{0}:'.format(Node.id))
+        FileWriter.write('JMP LOOP_{0}'.format(id))
+        FileWriter.write('EXIT_{0}:'.format(id))
         
 class Parser():
     tokens: Tokenizer
@@ -610,99 +618,15 @@ class FileWriter():
 
     def __init__(fn) -> None:
         FileWriter.fn = fn 
-        FileWriter.out_s = '''
-            ; constantes
-            SYS_EXIT equ 1
-            SYS_READ equ 3
-            SYS_WRITE equ 4
-            STDIN equ 0
-            STDOUT equ 1
-            True equ 1
-            False equ 0
-
-            segment .data
-
-            segment .bss  ; variaveis
-            res RESB 1
-
-            section .text
-            global _start
-
-            print:  ; subrotina print
-
-            PUSH EBP ; guarda o base pointer
-            MOV EBP, ESP ; estabelece um novo base pointer
-
-            MOV EAX, [EBP+8] ; 1 argumento antes do RET e EBP
-            XOR ESI, ESI
-
-            print_dec: ; empilha todos os digitos
-            MOV EDX, 0
-            MOV EBX, 0x000A
-            DIV EBX
-            ADD EDX, '0'
-            PUSH EDX
-            INC ESI ; contador de digitos
-            CMP EAX, 0
-            JZ print_next ; quando acabar pula
-            JMP print_dec
-
-            print_next:
-            CMP ESI, 0
-            JZ print_exit ; quando acabar de imprimir
-            DEC ESI
-
-            MOV EAX, SYS_WRITE
-            MOV EBX, STDOUT
-
-            POP ECX
-            MOV [res], ECX
-            MOV ECX, res
-
-            MOV EDX, 1
-            INT 0x80
-            JMP print_next
-
-            print_exit:
-            POP EBP
-            RET
-
-            ; subrotinas if/while
-            binop_je:
-            JE binop_true
-            JMP binop_false
-
-            binop_jg:
-            JG binop_true
-            JMP binop_false
-
-            binop_jl:
-            JL binop_true
-            JMP binop_false
-
-            binop_false:
-            MOV EBX, False
-            JMP binop_exit
-            binop_true:
-            MOV EBX, True
-            binop_exit:
-            RET
-
-            _start:
-
-            PUSH EBP ; guarda o base pointer
-            MOV EBP, ESP ; estabelece um novo base pointer
-
-            ; codigo gerado pelo compilador
-            MOV EDX, 0
-            '''
+        with open('./asm_template.txt', 'r') as f:
+            FileWriter.out_s = f.read()
 
     def write(line: str):
         FileWriter.out_s += line + '\n'
 
     def dump():
-        with open(FileWriter.fn, 'r') as f:
-            f.open(FileWriter.out_s + '; interrupcao de saida\nPOP EBP\nMOV EAX, 1\nINT 0x80\n')
+        with open(FileWriter.fn, 'w') as f:
+            f.write(FileWriter.out_s + '\n\n; interrupcao de saida\nPOP EBP\nMOV EAX, 1\nINT 0x80\n')
 
 def main(argv: list, argc: int):
     if argc < 2:
@@ -721,7 +645,7 @@ def main(argv: list, argc: int):
         raise FileNotFoundError
 
     _ = FileWriter()
-    FileWriter.fn = word[:-2]
+    FileWriter.fn = argv[1][:-2] + '.asm'
     # Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     root = Parser.run(Prepro.filter(word))
     # print(root)
