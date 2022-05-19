@@ -1,13 +1,16 @@
 {
     int x;
-    x = 3;
-    if (x > 2) {
-        printf(x);
-    } else {
-        printf(2);
+    x = 3+1;
+    printf(x);
+    if (x > 1)
+        x = 5-1;
+    if (x == 3) {
     }
-    while (x > 0) {
-        printf(x);
-        x = x - 1;
+    else {
+        x = 3;
     }
+    while (x < 5){
+        x = x+1;
+    }
+    printf(x);
 }
