@@ -85,44 +85,6 @@ MOV EDX, 0
 
 ; codigo gerado pelo compilador
 
-PUSH DWORD 0 ; Declare x
-MOV EBX, 10 ; Eval IntVal Node
-MOV [EBP-4], EBX ; x = 10
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-
-; begin print coroutine
-PUSH EBX ; Push args to stack
-CALL print ; Func call
-POP EBX ; Unstack args
-
-; begin while loop
-LOOP_20:
-; Evaluating BinOp <
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-PUSH EBX
-MOV EBX, 10 ; Eval IntVal Node
-POP EAX
-CMP EAX, EBX
-CALL binop_jl
-MOV EBX, EAX
-CMP EBX, False ; if condition is false, exit
-JE EXIT_20
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-
-; begin print coroutine
-PUSH EBX ; Push args to stack
-CALL print ; Func call
-POP EBX ; Unstack args
-; Evaluating BinOp -
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-PUSH EBX
-MOV EBX, 1 ; Eval IntVal Node
-POP EAX
-SUB EAX, EBX
-MOV EBX, EAX
-MOV [EBP-4], EBX ; x = 9
-JMP LOOP_20
-EXIT_20:
 
 
 ; interrupcao de saida

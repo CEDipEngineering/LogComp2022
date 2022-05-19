@@ -509,6 +509,7 @@ class Parser():
         if Parser.tokens.actual.type == "OCB":
             Parser.tokens.selectNext()
             if Parser.tokens.actual.type == "CCB":
+                Parser.tokens.selectNext()
                 return Block("EL BLOCO", [])
             opList = []
             while Parser.tokens.actual.type != "CCB":
