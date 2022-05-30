@@ -279,17 +279,17 @@ class UnOp(Node):
             a = self.children[0].evaluate(ST)
             if a[1] != int:
                 raise Exception("Unary operator + only valid for integers")
-            return (a, int)
+            return (a[0], int)
         elif self.value == '-':
             a = self.children[0].evaluate(ST)
             if a[1] != int:
                 raise Exception("Unary operator - only valid for integers")
-            return (-a, int)
+            return (-a[0], int)
         elif self.value == '!':
             a = self.children[0].evaluate(ST)
             if a[1] != int:
                 raise Exception("Unary operator 'not' only valid for integers")
-            return (not a, int)
+            return (not a[0], int)
 
 class IntVal(Node):
     def evaluate(self, ST: SymbolTable):
