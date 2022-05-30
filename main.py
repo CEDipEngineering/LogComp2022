@@ -30,6 +30,15 @@ class SymbolTable():
             return self._table[name]
         except Exception:
             raise NameError("Variable '{0}' referenced before assignment".format(name))
+    
+    def __str__(self) -> str:
+        out = "Symbol Table: \n"
+        for k, v in self._table.items():
+            out += f"{k} : {v}\n"
+        return out
+
+    def __repr__(self):
+        return str(self)
 
 class FuncTable():
     table = {}
@@ -198,7 +207,7 @@ class Node:
         pass
 
     def __str__(self):
-        return f"{self.value}:{[type(f) for f in self.children]}"
+        return f"{str(type(self))}({self.value}):{[str(f) for f in self.children]}"
 
     def __repr__(self):
         return self.__str__()
@@ -335,22 +344,26 @@ class While(Node):
 
 class FuncDec(Node):
     def evaluate(self, ST: SymbolTable):
-        FuncTable.declare(self.value, self)
         # print(FuncTable.table)
+        FuncTable.declare(self.value, self)
 
 class FuncCall(Node):
     def evaluate(self, ST: SymbolTable):
         function = FuncTable.retrieve(self.value)
         localScope = SymbolTable()
         varNames = []
-        for c in function.children[1:-2]: # Skip first and last child
+        # print(ST)
+        for c in function.children[1:-1]: # Skip first and last child
             c.evaluate(localScope)
-            varNames.append(c.value)
+            varNames.append(c.children[0].value)
+        # print("VarNames: {0}".format(varNames))
         for exp, name in zip(self.children, varNames):
             localScope.assign(name, exp.evaluate(ST))
         retVal = function.children[-1].evaluate(localScope)
-        if type(retVal[0]) != function.children[0].value:
-            raise Exception("Function {0} was expected to return a {1}, but returned {2} instead".format(self.value, function.children[0].value, type(retVal)))
+        # if retVal is function.children[0].value:
+            # print("Return do tipo certo")
+        # if type(retVal[0]) != function.children[0].value:
+        #     raise Exception("Function {0} was expected to return a {1}, but returned {2} instead".format(self.value, function.children[0].value, type(retVal)))
         return retVal
 
 class Return(Node):
@@ -486,17 +499,19 @@ class Parser():
 
     def parseFactor():
         # print(Parser.tokens.actual , " FACTOR")
-        operation = Parser.tokens.actual
-        if operation.type == "INT":
+        if Parser.tokens.actual.type == "INT":
+            val = Parser.tokens.actual.value
             Parser.tokens.selectNext()
-            return IntVal(value=operation.value, children=[])
-        if operation.type == "STR":
+            return IntVal(value=val, children=[])
+        if Parser.tokens.actual.type == "STR":
+            val = Parser.tokens.actual.value
             Parser.tokens.selectNext()
-            return StrVal(value=operation.value, children=[])
-        if operation.type == "IDENT":
-            ident_name = operation.value
+            return StrVal(value=val, children=[])
+        if Parser.tokens.actual.type == "IDENT":
+            ident_name = Parser.tokens.actual.value
             Parser.tokens.selectNext()
-            if Parser.tokens.actual == "OP":
+            # print("Factor ident token={0}".format(Parser.tokens.actual))
+            if Parser.tokens.actual.type == "OP":
                 Parser.tokens.selectNext()
                 funcCallExprs = []
                 if Parser.tokens.actual.type == "CP":
@@ -508,9 +523,11 @@ class Parser():
                             raise Exception("Arguments in function call must be separated by comma")
                         Parser.tokens.selectNext()
                         funcCallExprs.append(Parser.parseRelExpr())
-                node = FuncCall(ident_name, funcCallExprs)
-            return Identifier(value=operation.value, children=[])
-        if operation.type == "SCANF":
+                    Parser.tokens.selectNext()
+                # print(ident_name)
+                return FuncCall(ident_name, funcCallExprs)
+            return Identifier(value=ident_name, children=[])
+        if Parser.tokens.actual.type == "SCANF":
             Parser.tokens.selectNext()
             if Parser.tokens.actual.type != "OP":
                 raise Exception("Scanf function call requires open parentheses")
@@ -518,17 +535,17 @@ class Parser():
             if Parser.tokens.actual.type != "CP":
                 raise Exception("Scanf function call requires open and close parentheses")
             Parser.tokens.selectNext()
-            return Scanf(value=operation.value, children=[])
-        if operation.type == "PLUS":
+            return Scanf(value=Parser.tokens.actual.value, children=[])
+        if Parser.tokens.actual.type == "PLUS":
             Parser.tokens.selectNext()
             return UnOp(value='+', children=[Parser.parseFactor()])
-        if operation.type == "MINUS":
+        if Parser.tokens.actual.type == "MINUS":
             Parser.tokens.selectNext()
             return UnOp(value='-', children=[Parser.parseFactor()])
-        if operation.type == "NOT":
+        if Parser.tokens.actual.type == "NOT":
             Parser.tokens.selectNext()
             return UnOp(value='!', children=[Parser.parseFactor()])
-        if operation.type == "OP":
+        if Parser.tokens.actual.type == "OP":
             Parser.tokens.selectNext()
             node = Parser.parseRelExpr()
             if Parser.tokens.actual.type == "CP":
@@ -559,7 +576,7 @@ class Parser():
         elif Parser.tokens.actual.type == "IDENT":
             ident_name = Parser.tokens.actual.value
             Parser.tokens.selectNext()
-            if Parser.tokens.actual == "OP":
+            if Parser.tokens.actual.type == "OP":
                 Parser.tokens.selectNext()
                 funcCallExprs = []
                 needs_semi_col = True
@@ -572,13 +589,14 @@ class Parser():
                             raise Exception("Arguments in function call must be separated by comma")
                         Parser.tokens.selectNext()
                         funcCallExprs.append(Parser.parseRelExpr())
+                    Parser.tokens.selectNext()
                 node = FuncCall(ident_name, funcCallExprs)
             elif Parser.tokens.actual.type == 'ASSIGN':
                 Parser.tokens.selectNext()
                 node = Assignment("=", [Identifier(ident_name,[]), Parser.parseRelExpr()])
                 needs_semi_col = True
             else:
-                raise SyntaxError("Invalid solitary identifier encountered {0}".format(curr_token.value))
+                raise SyntaxError("Invalid solitary identifier encountered {0}".format(ident_name))
         elif Parser.tokens.actual.type == "TYPE":
             # print(Parser.tokens.actual)
             curr_token = Parser.tokens.actual
@@ -612,14 +630,18 @@ class Parser():
             needs_semi_col = True
         elif Parser.tokens.actual.type == "RETURN":
             Parser.tokens.selectNext()
-            if Parser.tokens.actual.type != "OP":
-                raise SyntaxError("Function call must contain arguments between paretheses")
-            Parser.tokens.selectNext()
-            node = Return('Return', [Parser.parseRelExpr()])
-            if Parser.tokens.actual.type != "CP":
-                raise SyntaxError("Function call must contain arguments between paretheses")
-            Parser.tokens.selectNext()
-            needs_semi_col = True
+            if Parser.tokens.actual.type == "SEMICOL":
+                Parser.tokens.selectNext()
+                node = Return('Return', [NoOp('nop', [])])
+            else:
+                if Parser.tokens.actual.type != "OP":
+                    raise SyntaxError("Function call must contain arguments between paretheses")
+                Parser.tokens.selectNext()
+                node = Return('Return', [Parser.parseRelExpr()])
+                if Parser.tokens.actual.type != "CP":
+                    raise SyntaxError("Function call must contain arguments between paretheses")
+                Parser.tokens.selectNext()
+                needs_semi_col = True
         elif Parser.tokens.actual.type == "OCB":
             node = Parser.parseBlock()
         elif Parser.tokens.actual.type == "WHILE":
