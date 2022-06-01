@@ -48,6 +48,22 @@ class FuncTable():
     table = {}
 
     def declare( name, ref):
+        '''
+        At the start of asm_template _start: we do push ebp, mov ebp, esp
+        Is this to emulate main? Yes
+
+        The process of declaring a function in 32bit x86 assembly follows the steps:
+        1. PUSH EBP ; Stores the current base pointer
+        2. MOV EBP, ESP ; Moves the stack to the new base pointer (essentially creating the local scope)
+        3. SUB ESP, n ; Where n is the number of bytes you must use to accomodate all the variables declared, for 5 integers, n would be 5*4, or 20
+        # Not sure # 4. PUSH EBX ; Push registers the function will need to modify, one for each argument, essentially
+        5. Declare to symbol table all variables used  starting at +8, going up by 4
+        6. Execute function block (generate assembly)
+        # Undo step 4 backwards # 7. POP EBX ; Restore values to registers
+        8. MOV ESP, EBP ; Destroy local scope
+        9. POP EBP ; Restore base pointer
+        10. RET
+        '''
         if name in FuncTable.table.keys():
             raise Exception(f"Function {name} already declared")
         FuncTable.table[name] = ref
@@ -218,7 +234,7 @@ class Node:
         pass
 
     def __str__(self):
-        return f"{str(type(self))}({self.value}):{[str(f) for f in self.children]}"
+        return "{0}:{1}\n{2}".format(type(self), str(self.value), ''.join(['\t'+str(c)+'\n' for c in self.children]))
 
     def __repr__(self):
         return self.__str__()
@@ -817,7 +833,7 @@ def main(argv: list, argc: int):
     FileWriter.fn = argv[1][:-2] + '.asm'
     # Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     root = Parser.run(Prepro.filter(word))
-    # print(root)
+    print(root)
     # ST = SymbolTable()
     # root.evaluate(ST)
     # FileWriter.dump()

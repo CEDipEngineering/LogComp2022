@@ -4,6 +4,8 @@
 
 ![SintaticDiagram](SyntaticDiagram.svg)
 
+https://aaronbloomfield.github.io/pdr/book/x86-32bit-ccc-chapter.pdf
+
 ## EBNF:
 
 BLOCK = "{", { STATEMENT }, "}" ;
