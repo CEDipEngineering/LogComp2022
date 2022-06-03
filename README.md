@@ -4,27 +4,56 @@
 
 ![SintaticDiagram](SyntaticDiagram.svg)
 
+Source for function assembly:
+
 https://aaronbloomfield.github.io/pdr/book/x86-32bit-ccc-chapter.pdf
 
 ## EBNF:
 
+PROGRAM = { FUNCDEC };
+
+FUNCDEC = TYPE, IDENT, "(", λ | ( (TYPE, IDENT) , {"," TYPE, IDENT} ), ")", BLOCK ;
+
 BLOCK = "{", { STATEMENT }, "}" ;
 
-STATEMENT = ( λ | ASSIGNMENT | PRINT), ";" ;
+STATEMENT = ( λ | ASSIGNMENT | PRINT | DECLARATION | RETURN | CALL ), ";" 
+            | ( WHILE | IF | BLOCK ) ;
 
-ASSIGNMENT = IDENTIFIER, "=", EXPRESSION ;
+DECALARTION = TYPE, IDENT, {",", IDENT};
 
-PRINT = "printf", "(", EXPRESSION, ")" ;
+RETURN = "return", "(", RELEXPRESSION ")" 
+        | "return";
 
-EXPRESSION = TERM, { ("+" | "-"), TERM } ;
+CALL = IDENT, "(", λ | ( (RELEXPRESSION) , {"," RELEXPRESSION} ), ")";
 
-TERM = FACTOR, { ("*" | "/"), FACTOR } ;
+WHILE = "while", "(", RELEXPRESSION, ")", STATEMENT ;
 
-FACTOR = (("+" | "-"), FACTOR) | NUMBER | "(", EXPRESSION, ")" | IDENTIFIER ;
+IF = "if", "(", RELEXPRESSION, ")", STATEMENT, ( λ | ("else", STATEMENT) );
+
+ASSIGNMENT = IDENTIFIER, "=", RELEXPRESSION ;
+
+PRINT = "printf", "(", RELEXPRESSION, ")" ;
+
+RELEXPRESSION = EXPRESSION, { ("==" | ">" | "<" ), EXPRESSION }
+
+EXPRESSION = TERM, { ("+" | "-" | "||" | "." ), TERM } ;
+
+TERM = FACTOR, { ("*" | "/" | "&&" ), FACTOR } ;
+
+FACTOR = (("+" | "-" | "!" ), FACTOR) 
+        | NUMBER 
+        | STRING
+        | IDENTIFIER 
+        | CALL
+        | "(", RELEXPRESSION, ")" 
+        | SCANF, "(", ")", ;
+        ;
 
 IDENTIFIER = LETTER, { LETTER | DIGIT | "_" } ;
 
 NUMBER = DIGIT, { DIGIT } ;
+
+STRING = '"', LETTER, {LETTER}, '"';
 
 LETTER = ( a | ... | z | A | ... | Z ) ;
 
