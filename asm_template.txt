@@ -75,13 +75,5 @@ MOV EBX, True
 binop_exit:
 RET
 
-_start:
 
-PUSH EBP ; guarda o base pointer
-MOV EBP, ESP ; estabelece um novo base pointer
-
-; codigo manualmente adicionado toda vez 
-MOV EDX, 0
-
-; codigo gerado pelo compilador
 

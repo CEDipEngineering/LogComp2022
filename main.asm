@@ -75,107 +75,36 @@ MOV EBX, True
 binop_exit:
 RET
 
+
+
+; main
+main:
+
+PUSH EBP ; Store base pointer
+MOV EBP, ESP ; Relocate base pointer to new stack top
+
+; begin print coroutine
+MOV EBX, 5 ; Eval IntVal Node
+PUSH EBX ; Push args to stack
+CALL print ; Func call
+POP EBX ; Unstack args
+; end print coroutine
+
+MOV EBX, 5 ; Eval IntVal Node
+MOV EBX, 5 ; Eval IntVal Node
+MOV EAX, EBX ; Moving evaluate children return to EAX
+MOV ESP, EBP ; Destroy local scope
+POP EBP ; Restore base pointer
+RET ; Exiting main
+
+
+PUSH EBP ; Store base pointer
+MOV EBP, ESP ; Relocate base pointer to new stack top
 _start:
 
-PUSH EBP ; guarda o base pointer
-MOV EBP, ESP ; estabelece um novo base pointer
 
-; codigo manualmente adicionado toda vez 
-MOV EDX, 0
-
-; codigo gerado pelo compilador
-
-PUSH DWORD 0 ; Declare x
-; Evaluating BinOp +
-MOV EBX, 3 ; Eval IntVal Node
-PUSH EBX
-MOV EBX, 1 ; Eval IntVal Node
-POP EAX
-ADD EAX, EBX
-MOV EBX, EAX
-MOV [EBP-4], EBX ; x = 4
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-
-; begin print coroutine
-PUSH EBX ; Push args to stack
-CALL print ; Func call
-POP EBX ; Unstack args
-
-; begin if statement
-; evaluate condition Node(>)=>[Node(x)=>[] Node(1)=>[]]
-; Evaluating BinOp >
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-PUSH EBX
-MOV EBX, 1 ; Eval IntVal Node
-POP EAX
-CMP EAX, EBX
-CALL binop_jg
-CMP EBX, False ; if condition is false, jump to else
-JE ELSE_18
-; if condition is true, evaluate true statement
-; Evaluating BinOp -
-MOV EBX, 5 ; Eval IntVal Node
-PUSH EBX
-MOV EBX, 1 ; Eval IntVal Node
-POP EAX
-SUB EAX, EBX
-MOV EBX, EAX
-MOV [EBP-4], EBX ; x = 4
-; exit once true statement is done
-JMP EXIT_IF_18
-ELSE_18:
-EXIT_IF_18:
-; end if statement
-
-
-; begin if statement
-; evaluate condition Node(==)=>[Node(x)=>[] Node(3)=>[]]
-; Evaluating BinOp ==
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-PUSH EBX
-MOV EBX, 3 ; Eval IntVal Node
-POP EAX
-CMP EAX, EBX
-CALL binop_je
-CMP EBX, False ; if condition is false, jump to else
-JE ELSE_27
-; if condition is true, evaluate true statement
-; exit once true statement is done
-JMP EXIT_IF_27
-ELSE_27:
-MOV EBX, 3 ; Eval IntVal Node
-MOV [EBP-4], EBX ; x = 3
-EXIT_IF_27:
-; end if statement
-
-
-; begin while loop
-LOOP_37:
-; Evaluating BinOp <
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-PUSH EBX
-MOV EBX, 5 ; Eval IntVal Node
-POP EAX
-CMP EAX, EBX
-CALL binop_jl
-CMP EBX, False ; if condition is false, exit
-JE EXIT_37
-; Evaluating BinOp +
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-PUSH EBX
-MOV EBX, 1 ; Eval IntVal Node
-POP EAX
-ADD EAX, EBX
-MOV EBX, EAX
-MOV [EBP-4], EBX ; x = 4
-JMP LOOP_37
-EXIT_37:
-MOV EBX, [EBP-4] ; Retrieve variable x from memory
-
-; begin print coroutine
-PUSH EBX ; Push args to stack
-CALL print ; Func call
-POP EBX ; Unstack args
+CALL main
+MOV EBX, EAX ; Output should be EBX, but EAX is RET default
 
 
 ; interrupcao de saida

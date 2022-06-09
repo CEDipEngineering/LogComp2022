@@ -47,7 +47,7 @@ class SymbolTable():
 class FuncTable():
     table = {}
 
-    def declare( name, ref):
+    def declare( name, ref, ST):
         '''
         At the start of asm_template _start: we do push ebp, mov ebp, esp
         Is this to emulate main? Yes
@@ -67,7 +67,31 @@ class FuncTable():
         if name in FuncTable.table.keys():
             raise Exception(f"Function {name} already declared")
         FuncTable.table[name] = ref
-        
+        FileWriter.write("; {0}".format(name))
+        FileWriter.write("{0}:\n".format(name))
+        FileWriter.write("PUSH EBP ; Store base pointer")
+        FileWriter.write("MOV EBP, ESP ; Relocate base pointer to new stack top")
+
+        # Technically dont need to, because will do PUSH DWORD 0;
+        # num_args = len(ref.children - 2)
+        # if num_args > 0:
+        #     FileWriter.write("SUB ESP, {0}".format(num_args*4))
+        # elif num_args > 3:
+        #     raise Exception("Too many arguments! Don't know how many registers I have!")
+
+        ## TODO:
+        ## Handle arguments
+
+        ref.children[-1].evaluate(ST) # Write block
+
+        ## TODO:
+        ## Pop registers from args
+
+        FileWriter.write("MOV ESP, EBP ; Destroy local scope")
+        FileWriter.write("POP EBP ; Restore base pointer")
+
+        FileWriter.write("RET ; Exiting {0}\n".format(name))
+
     def retrieve( name):
         try:
             return FuncTable.table[name]
@@ -240,12 +264,12 @@ class Node:
         return self.__str__()
 
 class BinOp(Node):
-    def evaluate(self):
+    def evaluate(self, ST: SymbolTable):
         FileWriter.write('; Evaluating BinOp {0}'.format(self.value))
         if self.value == '+':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != int or b[1] != int:
             #     raise Exception("Operation + only defined for int and int")
             FileWriter.write('POP EAX')
@@ -253,9 +277,9 @@ class BinOp(Node):
             FileWriter.write('MOV EBX, EAX')
             return (a[0] + b[0], int)
         elif self.value == '*':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != int or b[1] != int:
             #     raise Exception("Operation * only defined for int and int")
             FileWriter.write('POP EAX')
@@ -263,9 +287,9 @@ class BinOp(Node):
             FileWriter.write('MOV EBX, EAX')
             return (a[0] * b[0], int)
         elif self.value == '-':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != int or b[1] != int:
             #     raise Exception("Operation - only defined for int and int")
             FileWriter.write('POP EAX')
@@ -273,9 +297,9 @@ class BinOp(Node):
             FileWriter.write('MOV EBX, EAX')
             return (a[0] - b[0], int)
         elif self.value == '/':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != int or b[1] != int:
             #     raise Exception("Operation / only defined for int and int")
             FileWriter.write('POP EAX')
@@ -283,9 +307,9 @@ class BinOp(Node):
             FileWriter.write('MOV EBX, EAX')
             return (a[0] // b[0], int)
         elif self.value == '>':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != b[1]:
             #     raise Exception("Operation > only defined for two operands of same type")
             FileWriter.write('POP EAX')
@@ -294,9 +318,9 @@ class BinOp(Node):
             # FileWriter.write('MOV EBX, EAX')
             return (a[0] > b[0], int)
         elif self.value == '<':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != b[1]:
             #     raise Exception("Operation < only defined for two operands of same type")
             FileWriter.write('POP EAX')
@@ -305,9 +329,9 @@ class BinOp(Node):
             # FileWriter.write('MOV EBX, EAX')
             return (a[0] < b[0], int)
         elif self.value == '==':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != b[1]:
             #     raise Exception("Operation == only defined for two operands of same type")
             FileWriter.write('POP EAX')
@@ -316,9 +340,9 @@ class BinOp(Node):
             # FileWriter.write('MOV EBX, EAX')
             return (a[0] == b[0], int)
         elif self.value == '&&':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != int or b[1] != int:
             #     raise Exception("Operation && only defined for types int and int")
             FileWriter.write('POP EAX')
@@ -326,9 +350,9 @@ class BinOp(Node):
             FileWriter.write('MOV EBX, EAX')
             return (a[0] and b[0], int)
         elif self.value == '||':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
-            b = self.children[1].evaluate()
+            b = self.children[1].evaluate(ST)
             # if a[1] != int or b[1] != int:
             #     raise Exception("Operation || only defined for types int and int")
             FileWriter.write('POP EAX')
@@ -336,9 +360,9 @@ class BinOp(Node):
             FileWriter.write('MOV EBX, EAX')
             return (a[0] or b[0], int)
         elif self.value == '.':
-        #     a = self.children[0].evaluate()
+        #     a = self.children[0].evaluate(ST)
         #     FileWriter.write('PUSH EBX')
-        #     b = self.children[1].evaluate()
+        #     b = self.children[1].evaluate(ST)
         #     FileWriter.write('POP EAX')
         #     FileWriter.write('ADD EAX, EBX')
         #     FileWriter.write('MOV EBX, EAX')
@@ -348,20 +372,20 @@ class BinOp(Node):
 class UnOp(Node):
     def evaluate(self, ST: SymbolTable):
         if self.value == '+':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             # if a[1] != int:
             #     raise Exception("Unary operator + only valid for integers")
             FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
             return (a[0], int)
         elif self.value == '-':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             # if a[1] != int:
             #     raise Exception("Unary operator - only valid for integers")
             FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
             FileWriter.write('NEG EBX')
             return (-a[0], int)
         elif self.value == '!':
-            a = self.children[0].evaluate()
+            a = self.children[0].evaluate(ST)
             # if a[1] != int:
             #     raise Exception("Unary operator 'not' only valid for integers")
             FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
@@ -370,10 +394,9 @@ class UnOp(Node):
             pass
 
 class IntVal(Node):
-    def evaluate(self):
+    def evaluate(self, ST: SymbolTable):
         FileWriter.write('MOV EBX, {0} ; Eval IntVal Node'.format(self.value))
         return (self.value, int)
-        pass
 
 class StrVal(Node):
     def evaluate(self, ST: SymbolTable):
@@ -382,10 +405,8 @@ class StrVal(Node):
 class Block(Node):
     def evaluate(self, ST: SymbolTable):
         for f in self.children:
-            if type(f) == Return:
-                return f.evaluate(ST)
             f.evaluate(ST)
-
+            
 class VarDec(Node):
     def evaluate(self, ST: SymbolTable):
         [ST.declare(name.value, self.value) for name in self.children]
@@ -396,11 +417,12 @@ class Assignment(Node):
 
 class Printf(Node):
     def evaluate(self, ST: SymbolTable):
-        a = self.children[0].evaluate()
         FileWriter.write('\n; begin print coroutine')
+        a = self.children[0].evaluate(ST)
         FileWriter.write('PUSH EBX ; Push args to stack')
         FileWriter.write('CALL print ; Func call')
         FileWriter.write('POP EBX ; Unstack args')
+        FileWriter.write('; end print coroutine\n')
         print(self.children[0].evaluate(ST)[0])
 
 class Identifier(Node):
@@ -420,15 +442,15 @@ class If(Node):
         id = self.id
         FileWriter.write('\n; begin if statement')
         FileWriter.write('; evaluate condition {0}'.format(self.children[0]))
-        self.children[0].evaluate()
+        self.children[0].evaluate(ST)
         FileWriter.write('CMP EBX, False ; if condition is false, jump to else')
         FileWriter.write('JE ELSE_{0}'.format(id))
         FileWriter.write('; if condition is true, evaluate true statement')
-        self.children[1].evaluate()
+        self.children[1].evaluate(ST)
         FileWriter.write('; exit once true statement is done')
         FileWriter.write('JMP EXIT_IF_{0}'.format(id))
         FileWriter.write('ELSE_{0}:'.format(id))
-        self.children[2].evaluate()
+        self.children[2].evaluate(ST)
         FileWriter.write('EXIT_IF_{0}:'.format(id))
         FileWriter.write('; end if statement\n')
 
@@ -437,17 +459,21 @@ class While(Node):
         id = self.id
         FileWriter.write('\n; begin while loop')
         FileWriter.write('LOOP_{0}:'.format(id))
-        self.children[0].evaluate()
+        self.children[0].evaluate(ST)
         FileWriter.write('CMP EBX, False ; if condition is false, exit')
         FileWriter.write('JE EXIT_{0}'.format(id))
-        self.children[1].evaluate()
+        self.children[1].evaluate(ST)
         FileWriter.write('JMP LOOP_{0}'.format(id))
         FileWriter.write('EXIT_{0}:'.format(id))
 
 class FuncDec(Node):
     def evaluate(self, ST: SymbolTable):
         # print(FuncTable.table)
-        FuncTable.declare(self.value, self)
+        FuncTable.declare(self.value, self, ST)
+
+class BeginProg(Node):
+    def evaluate(self, ST: SymbolTable):
+        FileWriter.write("\nPUSH EBP ; Store base pointer\nMOV EBP, ESP ; Relocate base pointer to new stack top\n_start:\n\n")
 
 class FuncCall(Node):
     def evaluate(self, ST: SymbolTable):
@@ -455,22 +481,31 @@ class FuncCall(Node):
         localScope = SymbolTable()
         varNames = []
         # print(ST)
-        for c in function.children[1:-1]: # Skip first and last child
-            c.evaluate(localScope)
-            varNames.append(c.children[0].value)
-        # print("VarNames: {0}".format(varNames))
-        for exp, name in zip(self.children, varNames):
-            localScope.assign(name, exp.evaluate(ST))
-        retVal = function.children[-1].evaluate(localScope)
+        
+        ## TODO:
+        ## Handle arguments
+
+        FileWriter.write("CALL {0}".format(self.value))
+        FileWriter.write("MOV EBX, EAX ; Output should be EBX, but EAX is RET default")
+        
+        # for c in function.children[1:-1]: # Skip first and last child
+        #     c.evaluate(localScope)
+        #     varNames.append(c.children[0].value)
+        # # print("VarNames: {0}".format(varNames))
+        # for exp, name in zip(self.children, varNames):
+        #     localScope.assign(name, exp.evaluate(ST))
+        # retVal = function.children[-1].evaluate(localScope)
         # if retVal is function.children[0].value:
             # print("Return do tipo certo")
         # if type(retVal[0]) != function.children[0].value:
         #     raise Exception("Function {0} was expected to return a {1}, but returned {2} instead".format(self.value, function.children[0].value, type(retVal)))
-        return retVal
+        return  # retVal
 
 class Return(Node):
     def evaluate(self, ST: SymbolTable):
-        return self.children[0].evaluate(ST)
+        val = self.children[0].evaluate(ST)
+        FileWriter.write("MOV EAX, EBX ; Moving evaluate children return to EAX")
+        return val
 
 class Parser():
     tokens: Tokenizer
@@ -787,7 +822,6 @@ class Parser():
         ## Inicializa Tokenizer, roda Parser, retorna parseExpression()
         Parser.tokens = Tokenizer(source)
         result = Parser.parseProgram()
-        result.children.append(FuncCall('main', [])) # Add call to main
         if Parser.tokens.actual.type != "EOF":
             raise SyntaxError("Failed to reach EOF")
         return result
@@ -833,10 +867,12 @@ def main(argv: list, argc: int):
     FileWriter.fn = argv[1][:-2] + '.asm'
     # Parser.debug_run(Prepro.filter(word)) # Will dump all tokens for debugging
     root = Parser.run(Prepro.filter(word))
+    root.children.append(BeginProg('',[])) # Write start_ flag
+    root.children.append(FuncCall('main', [])) # Add call to main
     print(root)
-    # ST = SymbolTable()
-    # root.evaluate(ST)
-    # FileWriter.dump()
+    ST = SymbolTable()
+    root.evaluate(ST)
+    FileWriter.dump()
     return 0
 
 if __name__ == "__main__":
