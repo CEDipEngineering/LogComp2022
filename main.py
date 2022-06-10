@@ -92,14 +92,15 @@ class FuncTable():
         ## Handle arguments
         args = ref.children[1:-1] # Ignore first and last
         inc = 12
+        localScope = SymbolTable()
         if len(args) != 0:
             for c in args:
-                c.evaluate(ST, inc)
+                c.evaluate(localScope, inc)
                 inc+=4
                 # print(c)
                 
 
-        ref.children[-1].evaluate(ST) # Write block
+        ref.children[-1].evaluate(localScope) # Write block
 
         ## TODO:
         ## Pop registers from args
@@ -459,7 +460,7 @@ class If(Node):
     def evaluate(self, ST: SymbolTable):
         id = self.id
         FileWriter.write('\n; begin if statement')
-        FileWriter.write('; evaluate condition {0}'.format(self.children[0]))
+        FileWriter.write('; evaluate condition {0}'.format(self.children[0].value))
         self.children[0].evaluate(ST)
         FileWriter.write('CMP EBX, False ; if condition is false, jump to else')
         FileWriter.write('JE ELSE_{0}'.format(id))
@@ -875,6 +876,7 @@ def main(argv: list, argc: int):
     if argc < 2:
         print("Send more args plz")
         return 1
+
     _ = Parser()
     _ = Prepro()
     _ = FuncTable()
