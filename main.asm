@@ -77,6 +77,28 @@ RET
 
 
 
+; rock
+rock:
+
+PUSH EBP ; Store base pointer
+MOV EBP, ESP ; Relocate base pointer to new stack top
+PUSH DWORD 0 ; Declare x
+PUSH DWORD 0 ; Declare y
+PUSH DWORD 0 ; Declare h
+; Evaluating BinOp +
+MOV EBX, [EBP+8] ; Retrieve variable x from memory
+PUSH EBX
+MOV EBX, [EBP+12] ; Retrieve variable y from memory
+POP EAX
+ADD EAX, EBX
+MOV EBX, EAX
+MOV [EBP-4], EBX ; h = some value
+MOV EBX, [EBP-4] ; Retrieve variable h from memory
+MOV EAX, EBX ; Moving evaluate children return to EAX
+MOV ESP, EBP ; Destroy local scope
+POP EBP ; Restore base pointer
+RET ; Exiting rock
+
 ; main
 main:
 
@@ -85,12 +107,18 @@ MOV EBP, ESP ; Relocate base pointer to new stack top
 
 ; begin print coroutine
 MOV EBX, 5 ; Eval IntVal Node
+PUSH EBX ; Evaluating args in func call 
+
+MOV EBX, 10 ; Eval IntVal Node
+PUSH EBX ; Evaluating args in func call 
+
+CALL rock
+MOV EBX, EAX ; Output should be EBX, but EAX is RET default
 PUSH EBX ; Push args to stack
 CALL print ; Func call
 POP EBX ; Unstack args
 ; end print coroutine
 
-MOV EBX, 5 ; Eval IntVal Node
 MOV EBX, 5 ; Eval IntVal Node
 MOV EAX, EBX ; Moving evaluate children return to EAX
 MOV ESP, EBP ; Destroy local scope

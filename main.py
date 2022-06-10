@@ -6,31 +6,40 @@ class SymbolTable():
     def __init__(self):
         self._table = {}
         self._reservedWords = ['printf', 'while', 'if', 'else', 'scanf', 'return']
+        self.varCount = -4
 
     def isReserved(self, name):
         return name in self._reservedWords
 
-    def declare(self, name, typ):
+    def declare(self, name, typ, offset = 0):
         if name in self._table.keys():
             raise Exception(f"Variable {name} already declared")
         FileWriter.write('PUSH DWORD 0 ; Declare {0}'.format(name))
-        self._table[name] = (None, typ, self.varCount)
-        self.varCount += 4
+        if offset != 0:
+            self._table[name] = (None, typ, self.varCount + offset)
+            # print(self._table[name])
+        else:
+            self._table[name] = (None, typ, self.varCount)
+            self.varCount -= 4
         
     def assign(self, name, value):
         if name not in self._table.keys():
             raise Exception(f"Local variable {name} assigned before declaration")
-        # typ = self._table[name][1]
-        FileWriter.write('MOV [EBP-{0}], EBX ; {2} = {1}'.format(self._table[name][2], value[0], name))
-        self._table[name] = (value[0], int, self._table[name][2])
-        # if True:#value[1] == typ:
-        # else:
-        #     raise Exception(f"Variable assigned wrong type: {name} is {typ} tried to put {type(value)}({value})")
+        offset = self._table[name][2]
+        # print(offset)
+        if offset > 0:
+            FileWriter.write('MOV [EBP+{0}], EBX ; {2} = {1}'.format(offset, "some value", name))
+        else:
+            FileWriter.write('MOV [EBP{0}], EBX ; {2} = {1}'.format(offset, "some value", name))
+        self._table[name] = (None, int, self._table[name][2])
 
     def retrieve(self, name):
         try:
             var = self._table[name]
-            FileWriter.write('MOV EBX, [EBP-{0}] ; Retrieve variable {1} from memory'.format(var[2], name))
+            if var[2] > 0:
+                FileWriter.write('MOV EBX, [EBP+{0}] ; Retrieve variable {1} from memory'.format(var[2], name))
+            else: 
+                FileWriter.write('MOV EBX, [EBP{0}] ; Retrieve variable {1} from memory'.format(var[2], name))
             return var
         except Exception:
             raise NameError("Variable '{0}' referenced before assignment".format(name))
@@ -81,6 +90,14 @@ class FuncTable():
 
         ## TODO:
         ## Handle arguments
+        args = ref.children[1:-1] # Ignore first and last
+        inc = 12
+        if len(args) != 0:
+            for c in args:
+                c.evaluate(ST, inc)
+                inc+=4
+                # print(c)
+                
 
         ref.children[-1].evaluate(ST) # Write block
 
@@ -275,7 +292,8 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('ADD EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            return (a[0] + b[0], int)
+            # print(a, b)
+            # return (a[0] + b[0], int)
         elif self.value == '*':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -285,7 +303,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('IMUL EBX')
             FileWriter.write('MOV EBX, EAX')
-            return (a[0] * b[0], int)
+            # return (a[0] * b[0], int)
         elif self.value == '-':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -295,7 +313,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('SUB EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            return (a[0] - b[0], int)
+            # return (a[0] - b[0], int)
         elif self.value == '/':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -305,7 +323,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('IDIV EBX')
             FileWriter.write('MOV EBX, EAX')
-            return (a[0] // b[0], int)
+            # return (a[0] // b[0], int)
         elif self.value == '>':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -316,7 +334,7 @@ class BinOp(Node):
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_jg')
             # FileWriter.write('MOV EBX, EAX')
-            return (a[0] > b[0], int)
+            # return (a[0] > b[0], int)
         elif self.value == '<':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -327,7 +345,7 @@ class BinOp(Node):
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_jl')
             # FileWriter.write('MOV EBX, EAX')
-            return (a[0] < b[0], int)
+            # return (a[0] < b[0], int)
         elif self.value == '==':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -338,7 +356,7 @@ class BinOp(Node):
             FileWriter.write('CMP EAX, EBX')
             FileWriter.write('CALL binop_je')
             # FileWriter.write('MOV EBX, EAX')
-            return (a[0] == b[0], int)
+            # return (a[0] == b[0], int)
         elif self.value == '&&':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -348,7 +366,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('AND EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            return (a[0] and b[0], int)
+            # return (a[0] and b[0], int)
         elif self.value == '||':
             a = self.children[0].evaluate(ST)
             FileWriter.write('PUSH EBX')
@@ -358,7 +376,7 @@ class BinOp(Node):
             FileWriter.write('POP EAX')
             FileWriter.write('OR EAX, EBX')
             FileWriter.write('MOV EBX, EAX')
-            return (a[0] or b[0], int)
+            # return (a[0] or b[0], int)
         elif self.value == '.':
         #     a = self.children[0].evaluate(ST)
         #     FileWriter.write('PUSH EBX')
@@ -376,22 +394,23 @@ class UnOp(Node):
             # if a[1] != int:
             #     raise Exception("Unary operator + only valid for integers")
             FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
-            return (a[0], int)
+            # return (a[0], int)
         elif self.value == '-':
             a = self.children[0].evaluate(ST)
             # if a[1] != int:
             #     raise Exception("Unary operator - only valid for integers")
             FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
             FileWriter.write('NEG EBX')
-            return (-a[0], int)
+            # return (-a[0], int)
         elif self.value == '!':
             a = self.children[0].evaluate(ST)
             # if a[1] != int:
             #     raise Exception("Unary operator 'not' only valid for integers")
             FileWriter.write('MOV EBX, {0} ; Eval UnOp Node op={1}'.format(a[0], self.value))
             FileWriter.write('NOT EBX')
-            return (not a[0], int)
-            pass
+            # return (not a[0], int)
+        else:
+            raise Exception("Invalid UnOp {0}".format(self.value))
 
 class IntVal(Node):
     def evaluate(self, ST: SymbolTable):
@@ -408,8 +427,8 @@ class Block(Node):
             f.evaluate(ST)
             
 class VarDec(Node):
-    def evaluate(self, ST: SymbolTable):
-        [ST.declare(name.value, self.value) for name in self.children]
+    def evaluate(self, ST: SymbolTable, offset=0):
+        [ST.declare(name.value, self.value, offset) for name in self.children]
 
 class Assignment(Node):
     def evaluate(self, ST: SymbolTable):
@@ -423,7 +442,6 @@ class Printf(Node):
         FileWriter.write('CALL print ; Func call')
         FileWriter.write('POP EBX ; Unstack args')
         FileWriter.write('; end print coroutine\n')
-        print(self.children[0].evaluate(ST)[0])
 
 class Identifier(Node):
     def evaluate(self, ST: SymbolTable):
@@ -485,9 +503,12 @@ class FuncCall(Node):
         ## TODO:
         ## Handle arguments
 
-        FileWriter.write("CALL {0}".format(self.value))
-        FileWriter.write("MOV EBX, EAX ; Output should be EBX, but EAX is RET default")
-        
+
+        if len(self.children) > 0:
+            for c in reversed(self.children):
+                c.evaluate(ST)
+                FileWriter.write("PUSH EBX ; Evaluating args in func call \n")
+
         # for c in function.children[1:-1]: # Skip first and last child
         #     c.evaluate(localScope)
         #     varNames.append(c.children[0].value)
@@ -499,6 +520,10 @@ class FuncCall(Node):
             # print("Return do tipo certo")
         # if type(retVal[0]) != function.children[0].value:
         #     raise Exception("Function {0} was expected to return a {1}, but returned {2} instead".format(self.value, function.children[0].value, type(retVal)))
+        
+        FileWriter.write("CALL {0}".format(self.value))
+        FileWriter.write("MOV EBX, EAX ; Output should be EBX, but EAX is RET default")
+        
         return  # retVal
 
 class Return(Node):
@@ -869,7 +894,7 @@ def main(argv: list, argc: int):
     root = Parser.run(Prepro.filter(word))
     root.children.append(BeginProg('',[])) # Write start_ flag
     root.children.append(FuncCall('main', [])) # Add call to main
-    print(root)
+    # print(root)
     ST = SymbolTable()
     root.evaluate(ST)
     FileWriter.dump()
